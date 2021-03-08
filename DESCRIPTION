@@ -1,0 +1,14 @@
+Package: opdisDownsampling
+Type: Package
+Title: Distribution preserving downsampling of biomedical data
+Version: 0.1.0
+Author: Jorn Lotsch[aut,cre]
+Maintainer: Jorn Lotsch <j.loetsch@em.uni-frankfurt.de>
+Description: An optimized method for distribution-preserving downsampling of biomedical data. The package provides the necessary functions for class proportinal daowsampling data.
+Maintainer: Jorn Lotsch <j.loetsch@em.uni-frankfurt.de>
+LazyData: true
+Imports: caTools, twosamples, Distances, pracma, parallel, pbmcapply, methods, stats
+Suggests: testthat
+Depends: R (>= 3.5.0)
+License: GPL-3
+Encoding: UTF-8
