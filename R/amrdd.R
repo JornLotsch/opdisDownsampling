@@ -1,7 +1,6 @@
 #Calculates the mean relative difference for two probability density distributions
 #expressed as Smooth Density Histogram
-#meanabsrelDiffDensities
-# @importFrom SmoothDensHist1dim SmoothDensHist1dim
+#' @importFrom SmoothDensHist1dim SmoothDensHist1dim
 amrdd <- function(vector1, vector2) {
   densA <- SmoothDensHist1dim(c(vector1,vector2))
   xA = densA$Kernels

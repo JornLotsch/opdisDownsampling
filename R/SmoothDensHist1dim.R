@@ -1,5 +1,4 @@
 #Function to calculate a smooth density histogram for a single variable
-#Taken from the dbt collection of R tools, Author M. Thrun
 #' @importFrom pracma histc linspace
 #' @importFrom caTools trapz
 

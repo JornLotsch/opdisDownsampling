@@ -1,11 +1,11 @@
 \name{opdisDownsampling}
 \alias{opdisDownsampling}
-\title{Distribution preserving downsampling of biomedical data}
+\title{Optimal distribution-preserving downsampling of (biomedical) data}
 \description{
-  The package provides the necessary functions for class proportinal daowsampling data.
+  The package provides the necessary functions for optimal distribution-preserving downsampling of large (biomedical) data sets.
 }
 \usage{
-opdisDownsampling(Data, Cls, Size, Seed, nTrials, 
+opdisDownsampling(Data, Cls, Size, Seed, nTrials,
   TestStat = "ad", MaxCores = 8, JobSize = 10000)
 }
 \arguments{
@@ -19,13 +19,13 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials,
  \item{JobSize}{how many samples can be drwan at once.}
 }
 \value{
-  Returns a list of data including the drwan samples and the left-out data.
+  Returns a list of data containing the drawn samples and the omitted data.
  \item{ReducedData}{the selected sample data and class information.}
- \item{RemucedData}{the not selected data and class information.}
+ \item{RemucedData}{the not-selected sample data and class information.}
  }
 \references{
- Lotsch, J. (2021): 
- opdisDownsampling -- an R Package for distribution preserving downsampling of biomedical data.
+ Lotsch, J. (2021):
+ opdisDownsampling -- an R Package for optimal distribution-preserving downsampling of large (biomedical) data sets.
 }
 \author{
   Jorn Lotsch
@@ -33,7 +33,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials,
 \examples{
 ## example 1
 data(iris)
-Iris50percent <- opdisDownsampling(iris[,1:4], as.integer(iris$Species), 50) 
+Iris50percent <- opdisDownsampling(iris[,1:4], as.integer(iris$Species), 50)
 }
 \keyword{opdisDownsampling}
 \keyword{data sampling}

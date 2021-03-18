@@ -1,5 +1,4 @@
 #Function to calculate the Kullback-leibler divergence
-#Taken from the dbt collection of R tools, Author M. Thrun
 KullbLeiblKLD2 <- function (P, Q, sym = 1) {
   EPS = 1 / 10000
   P = P[!is.na(P)]
