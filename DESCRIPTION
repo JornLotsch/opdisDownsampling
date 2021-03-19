@@ -2,7 +2,7 @@ Package: opdisDownsampling
 Type: Package
 Title: Optimal Distribution Preserving Downsampling of Biomedical Data
 Version: 0.1.0
-Author: Jorn Lotsch[aut,cre]
+Author: Jorn Lotsch[aut,cre], Sebastian Malkusch[aut], Alfred Ultsch[aut]
 Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
 Description: An optimized method for distribution-preserving class-proportional downsampling of biomedical data.
 Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
