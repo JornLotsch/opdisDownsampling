@@ -33,7 +33,6 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
     if (hasArg("TestStat") == FALSE) TestStat = "ad" else TestStat = TestStat
 
     requireNamespace("twosamples")
-    requireNamespace("Distances")
     CompDistrib <- function(vector1, vector2) {
       switch(TestStat,
              "ad"  = {ad_stat(vector1, vector2)},

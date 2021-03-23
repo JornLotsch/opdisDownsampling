@@ -7,7 +7,7 @@ Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
 Description: An optimized method for distribution-preserving class-proportional downsampling of biomedical data.
 Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
 LazyData: true
-Imports: caTools, twosamples, Distances, pracma, parallel, pbmcapply, methods, stats
+Imports: caTools, twosamples, pracma, parallel, pbmcapply, methods, stats
 Suggests: testthat
 Depends: R (>= 3.5.0)
 License: GPL-3
