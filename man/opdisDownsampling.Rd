@@ -1,8 +1,8 @@
 \name{opdisDownsampling}
 \alias{opdisDownsampling}
-\title{Optimal distribution-preserving downsampling of (biomedical) data}
+\title{Optimal Distribution Preserving Down-Sampling of Bio-Medical Data}
 \description{
-  The package provides the necessary functions for optimal distribution-preserving downsampling of large (biomedical) data sets.
+  The package provides the necessary functions for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
 }
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials,
@@ -25,7 +25,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials,
  }
 \references{
  Lotsch, J. (2021):
- opdisDownsampling -- an R Package for optimal distribution-preserving downsampling of large (biomedical) data sets.
+ opdisDownsampling -- an R Package for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
 }
 \author{
   Jorn Lotsch
@@ -33,7 +33,8 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials,
 \examples{
 ## example 1
 data(iris)
-Iris50percent <- opdisDownsampling(iris[,1:4], as.integer(iris$Species), 50)
+Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
+  Size = 50, MaxCores = 1)
 }
 \keyword{opdisDownsampling}
 \keyword{data sampling}
