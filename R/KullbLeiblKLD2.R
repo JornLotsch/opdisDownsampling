@@ -1,5 +1,5 @@
 #Function to calculate the Kullback-leibler divergence
-KullbLeiblKLD2 <- function (P, Q, sym = 1) {
+KullbLeiblKLD2 <- function(P, Q, sym = 1) {
   EPS = 1 / 10000
   P = P[!is.na(P)]
   Q = Q[!is.na(Q)]

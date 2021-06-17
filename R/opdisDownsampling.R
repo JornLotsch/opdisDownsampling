@@ -1,11 +1,10 @@
-#Calculates the Impact effect size measure.
 #Samples a subset of data based on the similarity of
 #its probability distribution to that of the original data
 #' @useDynLib(opdisDownsampling, .registration = TRUE)
 #' @importFrom caTools sample.split
 #' @importFrom methods hasArg
 #' @importFrom twosamples ad_stat kuiper_stat cvm_stat wass_stat dts_stat
-#' @importFrom stats density dist ks.test prcomp
+#' @importFrom stats ks.test prcomp na.omit
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom parallel detectCores
 #' @importFrom pbmcapply pbmclapply
@@ -13,7 +12,7 @@
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
-                             MaxCores = 8, JobSize = 10000) {
+                             MaxCores = 8, JobSize = 10000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -34,20 +33,25 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
 
     requireNamespace("twosamples")
     CompDistrib <- function(vector1, vector2) {
-      switch(TestStat,
-             "ad"  = {ad_stat(vector1, vector2)},
-             "kuiper" = {kuiper_stat(vector1, vector2)},
-             "cvm" = {cvm_stat(vector1, vector2)},
-             "wass" = {wass_stat(vector1, vector2)},
-             "dts" = {dts_stat(vector1, vector2)},
-             "ks" = {ks.test(vector1, vector2)$statistic},
-             "kld" = {KullbLeiblKLD2(vector1, vector2)$KLD},
-             "amrdd" = {amrdd(vector1, vector2)},
-             "euc" = {EucDist(vector1, vector2)}
-      )
+      if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) == 0) {
+        Stat <- 1e27
+      } else {
+        Stat <- switch(TestStat,
+                       "ad" = { ad_stat(na.omit(vector1), na.omit(vector2)) },
+                       "kuiper" = { kuiper_stat(na.omit(vector1), na.omit(vector2)) },
+                       "cvm" = { cvm_stat(na.omit(vector1), na.omit(vector2)) },
+                       "wass" = { wass_stat(na.omit(vector1), na.omit(vector2)) },
+                       "dts" = { dts_stat(na.omit(vector1), na.omit(vector2)) },
+                       "ks" = { ks.test(na.omit(vector1), na.omit(vector2))$statistic },
+                       "kld" = { KullbLeiblKLD2(na.omit(vector1), na.omit(vector2))$KLD },
+                       "amrdd" = { amrdd(na.omit(vector1), na.omit(vector2)) },
+                       "euc" = { EucDist(na.omit(vector1), na.omit(vector2)) }
+        )
+      }
+      return(Stat)
     }
 
-    list.of.seeds.all <- 1:nTrials  + Seed
+    list.of.seeds.all <- 1:nTrials + Seed
     list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all) / JobSize))
     nlist.of.seeds <- unlist(lapply(list.of.seeds, length))
     ADstatAll <- vector()
@@ -66,7 +70,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
           # use all cores in devtools::test()
           num_workers <- detectCores()
         }
-        nProc <- min(num_workers - 1, MaxCores)
+        nProc <- min(num_workers - 1, MaxCores, na.rm = TRUE)
         requireNamespace("pbmcapply")
         ReducedDataMat <-
           pbmclapply(1:nlist.of.seeds[i], function(x) {
@@ -91,6 +95,16 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
       }
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
       ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
+
+      if (PCAimportance == TRUE & nlist.of.seeds[i] > 1 & ncol(dfx) > 2) {
+        pca1 <- prcomp(dfx[1:(ncol(dfx) - 1)], retx = TRUE, center = TRUE, scale = TRUE)
+        is.integer0 <- function(x) {
+          is.integer(x) && length(x) == 0L
+        }
+        selectedVars <- which(names(dfx) %in% relevant_PCAvariables(res.pca = pca1))
+        if (is.integer0(selectedVars) == FALSE)
+          ADstatMat <- ADstatMat[c(selectedVars),]
+      }
 
       BestTrial <- which.min(apply(ADstatMat, 2, function(x) max(x)))
       BestTrialStat <- min(apply(ADstatMat, 2, function(x) max(x)))

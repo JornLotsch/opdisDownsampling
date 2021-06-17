@@ -2,7 +2,7 @@
 #' @importFrom pracma histc linspace
 #' @importFrom caTools trapz
 
-nanmax <- function (Data) {
+nanmax <- function(Data) {
   if (length(dim(Data)) == 2) {
     SpaltenMinima <- apply(Data, 2, function(x) max(x, na.rm = TRUE))
     SpaltenInd <- NaN
@@ -13,7 +13,7 @@ nanmax <- function (Data) {
   return(SpaltenMinima)
 }
 
-SmoothDensHist1dim <- function (x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
+SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
   if (length(x) == 0) {
     warning("SmoothDensHist1dim: Size of x is zero.", call. = FALSE)
     if (is.null(KernelsOrNbins) == TRUE) Kernels = 1 else Kernels = KernelsOrNbins
@@ -25,7 +25,7 @@ SmoothDensHist1dim <- function (x, KernelsOrNbins = NULL, SDHinPercent, lambda) 
     smooth1D = function(Y, lambda) {
       if (is.vector(Y))
         Y = as.matrix(Y)
-      Y[is.na(Y)] <-0
+      Y[is.na(Y)] <- 0
       dd = dim(Y)
       m = dd[1]
       n = dd[2]
@@ -38,7 +38,7 @@ SmoothDensHist1dim <- function (x, KernelsOrNbins = NULL, SDHinPercent, lambda) 
     }
     if (missing(lambda)) lambda = 20
     if (missing(SDHinPercent)) SDHinPercent = 0
-    if (is.null(KernelsOrNbins))  KernelsOrNbins = 200
+    if (is.null(KernelsOrNbins)) KernelsOrNbins = 200
     if (length(KernelsOrNbins) < 1) KernelsOrNbins = 200
 
     x = x[is.finite(x)]
