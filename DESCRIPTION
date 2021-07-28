@@ -1,13 +1,24 @@
 Package: opdisDownsampling
 Type: Package
 Title: Optimal Distribution Preserving Down-Sampling of Bio-Medical Data
-Version: 0.5.0
-Author: Jorn Lotsch[aut,cre], Sebastian Malkusch[aut], Alfred Ultsch[aut]
-Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
+Version: 1.0.0
 Description: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
-LazyData: true
-Imports: caTools, twosamples, pracma, parallel, pbmcapply, methods, stats
-Suggests: testthat
+Authors@R: c(
+    person("Jorn", "Lotsch", , "j.lotsch@em.uni-frankfurt.de", c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-5818-6958")),
+    person("Sebastian", "Malkusch", , role = "aut", 
+           comment = c(ORCID = "")),
+    person("Alfred", "Ultsch", , role = "aut", 
+    comment = c(ORCID = "0000-0002-7845-3283")))
 Depends: R (>= 3.5.0)
+Imports: parallel, graphics, methods, stats, caTools, 
+  pracma, twosamples, utils, pbmcapply
+LazyData: true
+Suggests: testthat
 License: GPL-3
 Encoding: UTF-8
+Author: Jorn Lotsch [aut,cre] (<https://orcid.org/0000-0002-5818-6958>), 
+  Sebastian Malkusch [aut] (<https://orcid.org/0000-0001-6766-140X>), 
+  Alfred Ultsch [aut] (<https://orcid.org/0000-0002-7845-3283>)
+Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>
+  

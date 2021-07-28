@@ -1,0 +1,19 @@
+citHeader("To cite opdisDownsampling in publications use:")
+
+citEntry(
+  entry    = "Article",
+  title    = "{opdisDownsampling} Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling)",
+  author   = personList(person("Jörn", "Lötsch"),
+                   as.person("Sebastian Malkusch"),
+                   as.person("Alfred Ultsch")),
+  journal  = "PLoS One",
+  year     = "2021",
+  volume   = "",
+  number   = "",
+  pages    = "",
+  url      = "https://orcid.org/0000-0002-5818-6958",
+  textVersion = paste("Jörn Lötsch, Sebastian Malkusch, Alfred Ultsch.",
+  "Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling).",
+  "PLoS One 2021 (accepted)"
+  )
+)

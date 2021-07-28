@@ -23,13 +23,14 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
     dfx$Cls <- 1
   }
   if (Size >= nrow(dfx)) {
-    warning("opdisDownsampling: Size >= length of 'Data'. Nothing to downsample.", call. = FALSE)
+    warning("opdisDownsampling: Size >= length of 'Data'.
+    Nothing to downsample.", call. = FALSE)
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
-    if (hasArg("nTrials") == TRUE) nTrials = nTrials else nTrials = 1000
-    if (hasArg("Seed") == TRUE) Seed = Seed else Seed = 42
-    if (hasArg("TestStat") == FALSE) TestStat = "ad" else TestStat = TestStat
+    if (hasArg("nTrials") == TRUE) nTrials <- nTrials else nTrials <- 1000
+    if (hasArg("Seed") == TRUE) Seed <- Seed else Seed <- 42
+    if (hasArg("TestStat") == FALSE) TestStat <- "ad" else TestStat <- TestStat
 
     requireNamespace("twosamples")
     CompDistrib <- function(vector1, vector2) {
@@ -37,15 +38,33 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
         Stat <- 1e27
       } else {
         Stat <- switch(TestStat,
-                       "ad" = { ad_stat(na.omit(vector1), na.omit(vector2)) },
-                       "kuiper" = { kuiper_stat(na.omit(vector1), na.omit(vector2)) },
-                       "cvm" = { cvm_stat(na.omit(vector1), na.omit(vector2)) },
-                       "wass" = { wass_stat(na.omit(vector1), na.omit(vector2)) },
-                       "dts" = { dts_stat(na.omit(vector1), na.omit(vector2)) },
-                       "ks" = { ks.test(na.omit(vector1), na.omit(vector2))$statistic },
-                       "kld" = { KullbLeiblKLD2(na.omit(vector1), na.omit(vector2))$KLD },
-                       "amrdd" = { amrdd(na.omit(vector1), na.omit(vector2)) },
-                       "euc" = { EucDist(na.omit(vector1), na.omit(vector2)) }
+                       "ad" = {
+          ad_stat(na.omit(vector1), na.omit(vector2))
+        },
+                       "kuiper" = {
+          kuiper_stat(na.omit(vector1), na.omit(vector2))
+        },
+                       "cvm" = {
+          cvm_stat(na.omit(vector1), na.omit(vector2))
+        },
+                       "wass" = {
+          wass_stat(na.omit(vector1), na.omit(vector2))
+        },
+                       "dts" = {
+          dts_stat(na.omit(vector1), na.omit(vector2))
+        },
+                       "ks" = {
+          ks.test(na.omit(vector1), na.omit(vector2))$statistic
+        },
+                       "kld" = {
+          KullbLeiblKLD2(na.omit(vector1), na.omit(vector2))$KLD
+        },
+                       "amrdd" = {
+          amrdd(na.omit(vector1), na.omit(vector2))
+        },
+                       "euc" = {
+          EucDist(na.omit(vector1), na.omit(vector2))
+        }
         )
       }
       return(Stat)
@@ -78,8 +97,10 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
             sample <- sample.split(dfx$Cls, SplitRatio = Size / nrow(dfx))
             ReducedDataList <- subset(dfx, sample == TRUE)
             RemovedDataList <- subset(dfx, sample == FALSE)
-            ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) - 1)])
-            return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList, ADv = ADv))
+            ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
+            ReducedDataList[1:(ncol(ReducedDataList) - 1)])
+            return(list(ReducedDataList = ReducedDataList,
+            RemovedDataList = RemovedDataList, ADv = ADv))
           }, mc.cores = nProc)
       } else {
         ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
@@ -88,9 +109,11 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad",
           sample <- sample.split(dfx$Cls, SplitRatio = Size / nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) - 1)])
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
+          ReducedDataList[1:(ncol(ReducedDataList) - 1)])
           setTxtProgressBar(pb, x)
-          return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList, ADv = ADv))
+          return(list(ReducedDataList = ReducedDataList,
+          RemovedDataList = RemovedDataList, ADv = ADv))
         })
       }
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
