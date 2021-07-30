@@ -1,5 +1,5 @@
-#Calculates the Euclidean distance of two  probability density distributions
-#expressed as Smooth Density Histogram
+# Calculates the Euclidean distance of two probability density distributions
+# expressed as Smooth Density Histogram
 #' @importFrom SmoothDensHist1dim SmoothDensHist1dim
 EucDist <- function(vector1, vector2) {
   densA <- SmoothDensHist1dim(c(vector1, vector2))

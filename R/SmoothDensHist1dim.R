@@ -1,4 +1,4 @@
-#Function to calculate a smooth density histogram for a single variable
+# Function to calculate a smooth density histogram for a single variable
 #' @importFrom pracma histc linspace
 #' @importFrom caTools trapz
 
@@ -14,7 +14,8 @@ nanmax <- function(Data) {
 SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
   if (length(x) == 0) {
     warning("SmoothDensHist1dim: Size of x is zero.", call. = FALSE)
-    if (is.null(KernelsOrNbins) == TRUE) Kernels = 1 else Kernels = KernelsOrNbins
+    if (is.null(KernelsOrNbins) == TRUE)
+      Kernels = 1 else Kernels = KernelsOrNbins
     SDH = Kernels * 0
   } else {
     requireNamespace("pracma")
@@ -29,14 +30,18 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
       E <- diag(m)
       D1 <- (diff(E, 1))
       D2 <- (diff(D1, 1))
-      P <- lambda ^ 2 * (t(D2) %*% D2) + 2 * lambda * (t(D1) %*% D1)
+      P <- lambda^2 * (t(D2) %*% D2) + 2 * lambda * (t(D1) %*% D1)
       Z <- solve((E + P), Y)
       return(Z)
     }
-    if (missing(lambda)) lambda <- 20
-    if (missing(SDHinPercent)) SDHinPercent <- 0
-    if (is.null(KernelsOrNbins)) KernelsOrNbins <- 200
-    if (length(KernelsOrNbins) < 1) KernelsOrNbins <- 200
+    if (missing(lambda))
+      lambda <- 20
+    if (missing(SDHinPercent))
+      SDHinPercent <- 0
+    if (is.null(KernelsOrNbins))
+      KernelsOrNbins <- 200
+    if (length(KernelsOrNbins) < 1)
+      KernelsOrNbins <- 200
 
     x <- x[is.finite(x)]
     n <- length(x)
@@ -73,13 +78,13 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
         x <- x[DataInd]
         edges1 <- Kernels[InInd]
         nbins <- length(edges1)
-        #Kernels <- edges1
+        # Kernels <- edges1
         end <- length(edges1)
         edges1 <- c(-Inf, edges1[2:(end - 1)], Inf)
         V <- pracma::histc(x, edges1)
         dummy <- V$cnt
-        H <- dummy / n
-        SDH <- smooth1D(H, nbins / lambda)
+        H <- dummy/n
+        SDH <- smooth1D(H, nbins/lambda)
         SDH <- as.vector(SDH)
       }
 
@@ -99,10 +104,10 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
       if (Area < 1e-10) {
         SDH <- rep(0, length(Kernels))
       } else {
-        SDH <- SDH / Area
+        SDH <- SDH/Area
       }
     } else {
-      SDH <- SDH / nanmax(SDH)
+      SDH <- SDH/nanmax(SDH)
     }
   }
   return(list(Kernels = Kernels, SDH = SDH))
