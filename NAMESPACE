@@ -9,3 +9,4 @@ importFrom ("twosamples", "ad_stat", "kuiper_stat", "cvm_stat", "wass_stat", "dt
 importFrom("utils", "setTxtProgressBar", "txtProgressBar")
 importFrom("parallel", "detectCores")
 importFrom("pbmcapply", "pbmclapply")
+importFrom("benchmarkme", "get_ram")

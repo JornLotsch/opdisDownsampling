@@ -10,9 +10,10 @@
 #' @importFrom pbmcapply pbmclapply
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
+#' @importFrom benchmarkme get_ram
 #' @export
-opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad", MaxCores = 8,
-  JobSize = 10000, PCAimportance = FALSE) {
+opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
+  MaxCores, JobSize = 1000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -29,8 +30,6 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad", M
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
-    if (hasArg("nTrials") == TRUE)
-      nTrials <- nTrials else nTrials <- 1000
     if (hasArg("Seed") == TRUE)
       Seed <- Seed else Seed <- 42
     if (hasArg("TestStat") == FALSE)
@@ -65,8 +64,36 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad", M
       return(Stat)
     }
 
+    if (.Platform$OS.type != "windows" & MaxCores > 1) {
+      requireNamespace("parallel")
+      chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+      if (nzchar(chk) && chk == "TRUE") {
+        # use 2 cores in CRAN/Travis/AppVeyor
+        nProc <- 2L
+      } else {
+        # use all cores in devtools::test()
+        nProc <- detectCores() - 1
+      }
+      if (hasArg("MaxCores") == TRUE)
+        nProc <- MaxCores
+    } else nProc <- 1
+
     list.of.seeds.all <- 1:nTrials + Seed
-    list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all)/JobSize))
+
+    if (hasArg("JobSize") == TRUE)
+      JobSize <- JobSize else {
+      requireNamespace("benchmarkme")
+      JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * (dim(subset(dfx,
+        select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+    }
+
+    if (nProc > 1) {
+      list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc,
+        JobSize)))
+    } else {
+      list.of.seeds <- split(list.of.seeds.all, 1)
+    }
+
     nlist.of.seeds <- unlist(lapply(list.of.seeds, length))
     ADstatAll <- vector()
     ReducedDataI <- list()
@@ -74,18 +101,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials, TestStat = "ad", M
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
       requireNamespace("caTools")
-      if (nlist.of.seeds[i] * length(Cls) > 6000 & .Platform$OS.type != "windows" &
-        MaxCores > 1) {
-        requireNamespace("parallel")
-        chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
-        if (nzchar(chk) && chk == "TRUE") {
-          # use 2 cores in CRAN/Travis/AppVeyor
-          num_workers <- 2L
-        } else {
-          # use all cores in devtools::test()
-          num_workers <- detectCores()
-        }
-        nProc <- min(num_workers - 1, MaxCores, na.rm = TRUE)
+      if (nlist.of.seeds[[i]] * length(Cls) > 6000) {
         requireNamespace("pbmcapply")
         ReducedDataMat <- pbmclapply(1:nlist.of.seeds[i], function(x) {
           set.seed(list.of.seeds[[i]][x])
