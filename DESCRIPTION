@@ -3,13 +3,6 @@ Type: Package
 Title: Optimal Distribution Preserving Down-Sampling of Bio-Medical Data
 Version: 0.6.0
 Description: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
-Authors@R: c(
-    person("Jorn", "Lotsch", , "j.lotsch@em.uni-frankfurt.de", c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-5818-6958")),
-    person("Sebastian", "Malkusch", , role = "aut", 
-           comment = c(ORCID = "")),
-    person("Alfred", "Ultsch", , role = "aut", 
-    comment = c(ORCID = "0000-0002-7845-3283")))
 Depends: R (>= 3.5.0)
 Imports: parallel, graphics, methods, stats, caTools, 
   pracma, twosamples, utils, pbmcapply, benchmarkme
