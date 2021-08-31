@@ -12,8 +12,13 @@
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @importFrom benchmarkme get_ram
 #' @export
+<<<<<<< Updated upstream
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
   MaxCores, JobSize = 1000, PCAimportance = FALSE) {
+=======
+opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCores,
+  JobSize = 1000, PCAimportance = FALSE) {
+>>>>>>> Stashed changes
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -83,8 +88,12 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     if (hasArg("JobSize") == TRUE)
       JobSize <- JobSize else {
       requireNamespace("benchmarkme")
+<<<<<<< Updated upstream
       JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * (dim(subset(dfx,
         select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+=======
+      JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * product(dim(Data))
+>>>>>>> Stashed changes
     }
 
     if (nProc > 1) {
