@@ -13,7 +13,7 @@
 #' @importFrom benchmarkme get_ram
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
-  MaxCores, JobSize = 1000, PCAimportance = FALSE) {
+  MaxCores = 2048, JobSize = 1000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -30,27 +30,25 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
-    if (hasArg("Seed") == TRUE)
+    if (!missing(Seed))
       Seed <- Seed else Seed <- 42
-    if (hasArg("TestStat") == FALSE)
-      TestStat <- "ad" else TestStat <- TestStat
+    if (!missing(TestStat))
+      TestStat <- TestStat else TestStat <- "ad"
 
-    requireNamespace("twosamples")
     CompDistrib <- function(vector1, vector2) {
-      if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) ==
-        0) {
+      if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) == 0) {
         Stat <- 1e+27
       } else {
         Stat <- switch(TestStat, ad = {
-          ad_stat(na.omit(vector1), na.omit(vector2))
+          twosamples::ad_stat(na.omit(vector1), na.omit(vector2))
         }, kuiper = {
-          kuiper_stat(na.omit(vector1), na.omit(vector2))
+          twosamples::kuiper_stat(na.omit(vector1), na.omit(vector2))
         }, cvm = {
-          cvm_stat(na.omit(vector1), na.omit(vector2))
+          twosamples::cvm_stat(na.omit(vector1), na.omit(vector2))
         }, wass = {
-          wass_stat(na.omit(vector1), na.omit(vector2))
+          twosamples::wass_stat(na.omit(vector1), na.omit(vector2))
         }, dts = {
-          dts_stat(na.omit(vector1), na.omit(vector2))
+          twosamples::dts_stat(na.omit(vector1), na.omit(vector2))
         }, ks = {
           ks.test(na.omit(vector1), na.omit(vector2))$statistic
         }, kld = {
@@ -65,31 +63,26 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
 
     if (.Platform$OS.type != "windows" & MaxCores > 1) {
-      requireNamespace("parallel")
       chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
       if (nzchar(chk) && chk == "TRUE") {
-        # use 2 cores in CRAN/Travis/AppVeyor
-        nProc <- 2L
+        num_workers <- 2L
       } else {
-        # use all cores in devtools::test()
-        nProc <- detectCores() - 1
+        num_workers <- parallel::detectCores()
       }
-      if (hasArg("MaxCores") == TRUE)
-        nProc <- MaxCores
+      nProc <- min(num_workers - 1, MaxCores)
     } else nProc <- 1
 
     list.of.seeds.all <- 1:nTrials + Seed
 
-    if (hasArg("JobSize") == TRUE)
+    if (!missing(JobSize))
       JobSize <- JobSize else {
-      requireNamespace("benchmarkme")
       JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * (dim(subset(dfx,
         select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
     }
 
     if (nProc > 1) {
-      list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc,
-        JobSize)))
+      list.of.seeds <- split(list.of.seeds.all,
+                             ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc, JobSize)))
     } else {
       list.of.seeds <- split(list.of.seeds.all, 1)
     }
@@ -100,16 +93,14 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     RemovedDataI <- list()
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
-      requireNamespace("caTools")
       if (nlist.of.seeds[[i]] * length(Cls) > 6000) {
-        requireNamespace("pbmcapply")
-        ReducedDataMat <- pbmclapply(1:nlist.of.seeds[i], function(x) {
+        ReducedDataMat <- pbmcapply::pbmclapply(1:nlist.of.seeds[i], function(x) {
           set.seed(list.of.seeds[[i]][x])
-          sample <- sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
+          sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-          1)])
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
+                        ReducedDataList[1:(ncol(ReducedDataList) - 1)])
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
         }, mc.cores = nProc)
@@ -117,11 +108,11 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
         ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
           pb <- txtProgressBar(min = 0, max = nlist.of.seeds[i], style = 3)
           set.seed(list.of.seeds[[i]][x])
-          sample <- sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
+          sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-          1)])
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
+                        ReducedDataList[1:(ncol(ReducedDataList) - 1)])
           setTxtProgressBar(pb, x)
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))

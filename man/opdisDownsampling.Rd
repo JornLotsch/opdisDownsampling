@@ -5,7 +5,7 @@
   The package provides the necessary functions for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
 }
 \usage{
-opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCores,
+opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCores = 2048,
   JobSize = 1000, PCAimportance = FALSE)
 }
 \arguments{
