@@ -72,30 +72,11 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
     nProc <- min(num_workers - 1, MaxCores)
 
-    mclapply.hack <- function(mc.cores, ...) {
-      size.of.list <- length(list(...)[[1]])
-      cl <- makeCluster(min(size.of.list, detectCores()))
-      loaded.package.names <- c(sessionInfo()$basePkgs, names(sessionInfo()$otherPkgs))
-      tryCatch({
-        this.env <- environment()
-        while (identical(this.env, globalenv()) == FALSE) {
-          clusterExport(cl, ls(all.names = TRUE, envir = this.env), envir = this.env)
-          this.env <- parent.env(environment())
-        }
-        clusterExport(cl, ls(all.names = TRUE, envir = globalenv()), envir = globalenv())
-        parLapply(cl, 1:length(cl), function(xx) {
-          lapply(loaded.package.names, function(yy) {
-          require(yy, character.only = TRUE)
-          })
-        })
-        return(parLapply(cl, ...))
-      }, finally = {
-        stopCluster(cl)
-      })
+    lapply.hack <- function(mc.cores, ...) {
+      lapply(...)
     }
-
     mclapply <- switch(Sys.info()[["sysname"]], Windows = {
-      mclapply.hack
+      lapply.hack
     }, Linux = {
       parallel::mclapply
     }, Darwin = {
