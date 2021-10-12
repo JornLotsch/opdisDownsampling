@@ -1,7 +1,7 @@
 Package: opdisDownsampling
 Type: Package
 Title: Optimal Distribution Preserving Down-Sampling of Bio-Medical Data
-Version: 0.6.1
+Version: 0.7.0
 Description: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
 Depends: R (>= 3.5.0)
 Imports: parallel, graphics, methods, stats, caTools, 
@@ -9,7 +9,7 @@ Imports: parallel, graphics, methods, stats, caTools,
 LazyData: true
 Suggests: testthat
 License: GPL-3
-URL: https://github.com/JornLotsch/opdisDownsampling
+URL: https://cran.r-project.org/package=opdisDownsampling
 Encoding: UTF-8
 Author: Jorn Lotsch [aut,cre] (<https://orcid.org/0000-0002-5818-6958>), 
   Sebastian Malkusch [aut] (<https://orcid.org/0000-0001-6766-140X>), 

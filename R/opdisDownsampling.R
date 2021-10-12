@@ -5,8 +5,7 @@
 #' @importFrom methods hasArg
 #' @importFrom twosamples ad_stat kuiper_stat cvm_stat wass_stat dts_stat
 #' @importFrom stats ks.test prcomp na.omit
-#' @importFrom utils setTxtProgressBar txtProgressBar
-#' @importFrom parallel detectCores
+#' @importFrom parallel detectCores makeCluster clusterExport stopCluster parLapply
 #' @importFrom pbmcapply pbmclapply
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
@@ -22,6 +21,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     dfx$Cls <- Cls
   } else {
     dfx$Cls <- 1
+    Cls <- as.vector(dfx$Cls)
   }
   if (Size >= nrow(dfx)) {
     warning("opdisDownsampling: Size >= length of 'Data'.
@@ -36,7 +36,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       TestStat <- TestStat else TestStat <- "ad"
 
     CompDistrib <- function(vector1, vector2) {
-      if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) == 0) {
+      if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) ==
+        0) {
         Stat <- 1e+27
       } else {
         Stat <- switch(TestStat, ad = {
@@ -62,15 +63,53 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       return(Stat)
     }
 
-    if (.Platform$OS.type != "windows" & MaxCores > 1) {
-      chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
-      if (nzchar(chk) && chk == "TRUE") {
-        num_workers <- 2L
-      } else {
-        num_workers <- parallel::detectCores()
-      }
-      nProc <- min(num_workers - 1, MaxCores)
-    } else nProc <- 1
+    requireNamespace("parallel")
+    chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+    if (nzchar(chk) && chk == "TRUE") {
+      num_workers <- 2L
+    } else {
+      num_workers <- parallel::detectCores()
+    }
+    nProc <- min(num_workers - 1, MaxCores)
+
+    mclapply.hack <- function(...) {
+      ## Create a cluster
+      size.of.list <- length(list(...)[[1]])
+      cl <- makeCluster(min(size.of.list, detectCores()))
+      ## Find out the names of the loaded packages
+      loaded.package.names <- c(sessionInfo()$basePkgs, names(sessionInfo()$otherPkgs))
+      tryCatch({
+        ## Copy over all of the objects within scope to all clusters.
+        this.env <- environment()
+        while (identical(this.env, globalenv()) == FALSE) {
+          clusterExport(cl, ls(all.names = TRUE, envir = this.env), envir = this.env)
+          this.env <- parent.env(environment())
+        }
+        clusterExport(cl, ls(all.names = TRUE, envir = globalenv()), envir = globalenv())
+
+        ## Load the libraries on all the clusters N.B. length(cl) returns the
+        ## number of clusters
+        parLapply(cl, 1:length(cl), function(xx) {
+          lapply(loaded.package.names, function(yy) {
+          require(yy, character.only = TRUE)
+          })
+        })
+
+        ## Run the lapply in parallel
+        return(parLapply(cl, ...))
+      }, finally = {
+        ## Stop the cluster
+        stopCluster(cl)
+      })
+    }
+
+    mclapply <- switch(Sys.info()[["sysname"]], Windows = {
+      mclapply.hack
+    }, Linux = {
+      mclapply
+    }, Darwin = {
+      mclapply
+    })
 
     list.of.seeds.all <- 1:nTrials + Seed
 
@@ -81,8 +120,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
 
     if (nProc > 1) {
-      list.of.seeds <- split(list.of.seeds.all,
-                             ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc, JobSize)))
+      list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc,
+        JobSize)))
     } else {
       list.of.seeds <- split(list.of.seeds.all, 1)
     }
@@ -94,26 +133,24 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
       if (nlist.of.seeds[[i]] * length(Cls) > 6000) {
-        ReducedDataMat <- pbmcapply::pbmclapply(1:nlist.of.seeds[i], function(x) {
+        ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
           set.seed(list.of.seeds[[i]][x])
           sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
-                        ReducedDataList[1:(ncol(ReducedDataList) - 1)])
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
+          1)])
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
         }, mc.cores = nProc)
       } else {
         ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
-          pb <- txtProgressBar(min = 0, max = nlist.of.seeds[i], style = 3)
           set.seed(list.of.seeds[[i]][x])
           sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)],
-                        ReducedDataList[1:(ncol(ReducedDataList) - 1)])
-          setTxtProgressBar(pb, x)
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
+          1)])
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
         })
@@ -148,5 +185,5 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       RemovedData <- as.vector(RemovedData$Data)
     }
   }
-  return(list(ReducedData = ReducedData, RemovedData = RemovedData))
+  return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = row.names(ReducedData)))
 }

@@ -22,11 +22,13 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCor
 \value{
   Returns a list of data containing the drawn samples and the omitted data.
  \item{ReducedData}{the selected sample data and class information.}
- \item{RemucedData}{the not-selected sample data and class information.}
+ \item{ReducedData}{the not-selected sample data and class information.}
+ \item{ReducedInstances}{the instance numbers of the selected sample data.}
  }
 \references{
- Lotsch, J. (2021):
- opdisDownsampling -- an R Package for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
+ Lotsch, J., Malkusch, S., Ultsch, A. (2021):
+ Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling). 
+ PLoS One. 2021 Aug 5;16(8):e0255838. doi: 10.1371/journal.pone.0255838. eCollection 2021.
 }
 \author{
   Jorn Lotsch
