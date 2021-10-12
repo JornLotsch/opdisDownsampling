@@ -117,13 +117,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       list.of.seeds <- split(list.of.seeds.all, 1)
     }
 
+    #Main part
     nlist.of.seeds <- unlist(lapply(list.of.seeds, length))
     ADstatAll <- vector()
     ReducedDataI <- list()
     RemovedDataI <- list()
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
-      if (nlist.of.seeds[[i]] * length(Cls) > 6000) {
         ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
           set.seed(list.of.seeds[[i]][x])
           sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
@@ -134,18 +134,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
         }, mc.cores = nProc)
-      } else {
-        ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
-          set.seed(list.of.seeds[[i]][x])
-          sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
-          ReducedDataList <- subset(dfx, sample == TRUE)
-          RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-          1)])
-          return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
-          ADv = ADv))
-        })
-      }
+
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
       ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
 
