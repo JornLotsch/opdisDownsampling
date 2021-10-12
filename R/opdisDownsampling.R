@@ -72,7 +72,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
     nProc <- min(num_workers - 1, MaxCores)
 
-    mclapply.hack <- function(...) {
+    mclapply.hack <- function(mc.cores, ...) {
       size.of.list <- length(list(...)[[1]])
       cl <- makeCluster(min(size.of.list, detectCores()))
       loaded.package.names <- c(sessionInfo()$basePkgs, names(sessionInfo()$otherPkgs))
@@ -97,9 +97,9 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     mclapply <- switch(Sys.info()[["sysname"]], Windows = {
       mclapply.hack
     }, Linux = {
-      mclapply
+      parallel::mclapply
     }, Darwin = {
-      mclapply
+      parallel::mclapply
     })
 
     list.of.seeds.all <- 1:nTrials + Seed
