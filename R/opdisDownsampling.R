@@ -6,10 +6,12 @@
 #' @importFrom twosamples ad_stat kuiper_stat cvm_stat wass_stat dts_stat
 #' @importFrom stats ks.test prcomp na.omit
 #' @importFrom parallel detectCores makeCluster clusterExport stopCluster parLapply
-#' @importFrom pbmcapply pbmclapply
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @importFrom benchmarkme get_ram
+#' @importFrom memuse Sys.meminfo
+#' @importFrom foreach foreach dopar
+#' @importFrom doParallel registerDoParallel
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
   MaxCores = 2048, JobSize = 1000, PCAimportance = FALSE) {
@@ -18,11 +20,11 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     if (length(Cls) != nrow(dfx)) {
       stop("opdisDownsampling: Unequal number of cases and class memberships.")
     }
-    dfx$Cls <- Cls
   } else {
-    dfx$Cls <- 1
-    Cls <- as.vector(dfx$Cls)
+    Cls <- rep(1, nrow(dfx))
   }
+  dfx$Cls <- Cls
+
   if (Size >= nrow(dfx)) {
     warning("opdisDownsampling: Size >= length of 'Data'.
     Nothing to downsample.",
@@ -63,7 +65,6 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       return(Stat)
     }
 
-    requireNamespace("parallel")
     chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
     if (nzchar(chk) && chk == "TRUE") {
       num_workers <- 2L
@@ -72,23 +73,15 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
     nProc <- min(num_workers - 1, MaxCores)
 
-    lapply.hack <- function(mc.cores, ...) {
-      lapply(...)
-    }
-    mclapply <- switch(Sys.info()[["sysname"]], Windows = {
-      lapply.hack
-    }, Linux = {
-      parallel::mclapply
-    }, Darwin = {
-      parallel::mclapply
-    })
-
     list.of.seeds.all <- 1:nTrials + Seed
 
     if (!missing(JobSize))
       JobSize <- JobSize else {
-      JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * (dim(subset(dfx,
-        select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+      switch(Sys.info()[["sysname"]], Windows = {
+        JobSize <- as.numeric(memuse::Sys.meminfo()$freeram) * 0.8 * nTrials *
+          (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+      }, JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials * (dim(subset(dfx,
+        select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2]))
     }
 
     if (nProc > 1) {
@@ -98,23 +91,38 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       list.of.seeds <- split(list.of.seeds.all, 1)
     }
 
-    #Main part
-    nlist.of.seeds <- unlist(lapply(list.of.seeds, length))
+    # Main part
+    nlist.of.seeds <- as.integer(unlist(lapply(list.of.seeds, length)))
     ADstatAll <- vector()
     ReducedDataI <- list()
     RemovedDataI <- list()
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
-        ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
+      switch(Sys.info()[["sysname"]], Windows = {
+        requireNamespace("foreach")
+        doParallel::registerDoParallel(nProc)
+        x <- integer()
+        ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar%
+          {
           set.seed(list.of.seeds[[i]][x])
           sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
           ReducedDataList <- subset(dfx, sample == TRUE)
           RemovedDataList <- subset(dfx, sample == FALSE)
           ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-          1)])
+            1)])
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
+            ADv = ADv))
+          }
+      }, ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
+        set.seed(list.of.seeds[[i]][x])
+        sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
+        ReducedDataList <- subset(dfx, sample == TRUE)
+        RemovedDataList <- subset(dfx, sample == FALSE)
+        ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
+          1)])
+        return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
-        }, mc.cores = nProc)
+      }, mc.cores = nProc))
 
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
       ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
@@ -146,5 +154,5 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       RemovedData <- as.vector(RemovedData$Data)
     }
   }
-  return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = row.names(ReducedData)))
+  return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData)))
 }
