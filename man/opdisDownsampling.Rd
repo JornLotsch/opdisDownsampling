@@ -6,7 +6,7 @@
 }
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCores = 2048,
-  JobSize = 1000, PCAimportance = FALSE)
+  JobSize = 10000, PCAimportance = FALSE)
 }
 \arguments{
  \item{Data}{the data as a vector, matrix or data frame.}

@@ -10,11 +10,11 @@
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @importFrom benchmarkme get_ram
 #' @importFrom memuse Sys.meminfo
-#' @importFrom foreach foreach dopar
+#' @importFrom foreach foreach
 #' @importFrom doParallel registerDoParallel
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
-  MaxCores = 2048, JobSize = 1000, PCAimportance = FALSE) {
+  MaxCores = 2048, JobSize = 10000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -113,7 +113,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
             ADv = ADv))
           }
-      }, ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
+      },
+      { ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
         set.seed(list.of.seeds[[i]][x])
         sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
         ReducedDataList <- subset(dfx, sample == TRUE)
@@ -122,7 +123,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           1)])
         return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
           ADv = ADv))
-      }, mc.cores = nProc))
+      }, mc.cores = nProc)
+      })
 
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
       ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
