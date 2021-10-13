@@ -11,7 +11,7 @@
 #' @importFrom benchmarkme get_ram
 #' @importFrom memuse Sys.meminfo
 #' @importFrom foreach foreach
-#' @importFrom doParallel registerDoParallel
+#' @importFrom doParallel registerDoParallel stopImplicitCluster
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
   MaxCores = 2048, JobSize = 10000, PCAimportance = FALSE) {
@@ -113,6 +113,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
             ADv = ADv))
           }
+        doParallel::stopImplicitCluster()
       },
       { ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
         set.seed(list.of.seeds[[i]][x])
