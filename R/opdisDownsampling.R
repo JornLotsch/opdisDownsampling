@@ -5,7 +5,7 @@
 #' @importFrom methods hasArg
 #' @importFrom twosamples ad_stat kuiper_stat cvm_stat wass_stat dts_stat
 #' @importFrom stats ks.test prcomp na.omit
-#' @importFrom parallel detectCores makeCluster clusterExport stopCluster parLapply
+#' @importFrom parallel detectCores
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @importFrom benchmarkme get_ram
