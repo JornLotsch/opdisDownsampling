@@ -98,7 +98,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     RemovedDataI <- list()
     for (i in 1:length(list.of.seeds)) {
       ADstat <- vector()
-      switch(Sys.info()[["sysname"]], Windows = {
+      if(nProc > 1) {
+        switch(Sys.info()[["sysname"]], Windows = {
         requireNamespace("foreach")
         doParallel::registerDoParallel(nProc)
         x <- integer()
@@ -115,7 +116,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           }
         doParallel::stopImplicitCluster()
       },
-      { ReducedDataMat <- mclapply(1:nlist.of.seeds[i], function(x) {
+      { ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
         set.seed(list.of.seeds[[i]][x])
         sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
         ReducedDataList <- subset(dfx, sample == TRUE)
@@ -126,6 +127,18 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           ADv = ADv))
       }, mc.cores = nProc)
       })
+      } else {
+        ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
+          set.seed(list.of.seeds[[i]][x])
+          sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
+          ReducedDataList <- subset(dfx, sample == TRUE)
+          RemovedDataList <- subset(dfx, sample == FALSE)
+          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
+                                                                                  1)])
+          return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
+                      ADv = ADv))
+        })
+      }
 
       ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
       ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
