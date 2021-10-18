@@ -32,7 +32,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
-    if (is.numeric(as.matrix(Data)) == FALSE) {
+    if (is.numeric(as.matrix(na.omit(Data))) == FALSE) {
       warning("opdisDownsampling: Only numeric data allowed.
     Nothing to downsample.",
         call. = FALSE)

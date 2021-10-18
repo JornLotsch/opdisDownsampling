@@ -9,7 +9,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCor
   JobSize = 10000, PCAimportance = FALSE)
 }
 \arguments{
- \item{Data}{the data as a vector, matrix or data frame.}
+ \item{Data}{the (numerical!) data as a vector, matrix or data frame.}
  \item{Cls}{the class information, if any, as a vector of similar length as instances in the data.}
  \item{Size}{the percentage of instances per class to be drwan.}
  \item{Seed}{a predefined seed to modify the results.}
