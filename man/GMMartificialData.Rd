@@ -2,7 +2,7 @@
 \alias{GMMartificialData}
 
 \docType{data}
-\title{Example data an artificial Gaussioan mixture.}
+\title{Example data an artificial Gaussian mixture.}
 
 \description{Dataset of 30000 instances with 10 variables that are Gaussian mixtures and belong to classes Cls = 1, 2, or 3, with different means and standard deviations and equal weights of 0.5, 0.4, and 0.1, respectively.}
 

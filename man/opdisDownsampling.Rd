@@ -5,18 +5,19 @@
   The package provides the necessary functions for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
 }
 \usage{
-opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCores = 2048,
+opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
+TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
   JobSize = 10000, PCAimportance = FALSE)
 }
 \arguments{
  \item{Data}{the (numerical!) data as a vector, matrix or data frame.}
  \item{Cls}{the class information, if any, as a vector of similar length as instances in the data.}
- \item{Size}{the percentage of instances per class to be drwan.}
+ \item{Size}{the percentage of instances per class to be drawn.}
  \item{Seed}{a predefined seed to modify the results.}
  \item{nTrials}{how many samples to choose from should be randomly drawn.}
  \item{TestStat}{statistical criterion for similarity judgment.}
  \item{MaxCores}{maximum number of cpu cores to use for parallel computing.}
- \item{JobSize}{how many samples can be drwan at once.}
+ \item{JobSize}{how many samples can be drawn at once.}
  \item{PCAimportance}{PCA based feature selection; only variables important in PCA projection are considered.}
 }
 \value{
@@ -27,7 +28,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad", MaxCor
  }
 \references{
  Lotsch, J., Malkusch, S., Ultsch, A. (2021):
- Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling). 
+ Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling).
  PLoS One. 2021 Aug 5;16(8):e0255838. doi: 10.1371/journal.pone.0255838. eCollection 2021.
 }
 \author{

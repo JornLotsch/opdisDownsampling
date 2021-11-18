@@ -1,20 +1,15 @@
 # Samples a subset of data based on the similarity of its probability
 # distribution to that of the original data
 #' @useDynLib(opdisDownsampling, .registration = TRUE)
-#' @importFrom caTools sample.split
 #' @importFrom methods hasArg
-#' @importFrom twosamples ad_stat kuiper_stat cvm_stat wass_stat dts_stat
-#' @importFrom stats ks.test prcomp na.omit
 #' @importFrom parallel detectCores
-#' @importFrom EucDist EucDist
-#' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 #' @importFrom benchmarkme get_ram
 #' @importFrom memuse Sys.meminfo
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #' @import foreach
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
-  MaxCores = 2048, JobSize = 10000, PCAimportance = FALSE) {
+  MaxCores = getOption("mc.cores", 2L), JobSize = 10000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -41,43 +36,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     } else {
       if (!missing(Seed))
         Seed <- Seed else Seed <- 42
-      if (!missing(TestStat))
-        TestStat <- TestStat else TestStat <- "ad"
 
-      CompDistrib <- function(vector1, vector2) {
-        if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) ==
-          0) {
-          Stat <- 1e+27
-        } else {
-          Stat <- switch(TestStat, ad = {
-          twosamples::ad_stat(na.omit(vector1), na.omit(vector2))
-          }, kuiper = {
-          twosamples::kuiper_stat(na.omit(vector1), na.omit(vector2))
-          }, cvm = {
-          twosamples::cvm_stat(na.omit(vector1), na.omit(vector2))
-          }, wass = {
-          twosamples::wass_stat(na.omit(vector1), na.omit(vector2))
-          }, dts = {
-          twosamples::dts_stat(na.omit(vector1), na.omit(vector2))
-          }, ks = {
-          ks.test(na.omit(vector1), na.omit(vector2))$statistic
-          }, kld = {
-          KullbLeiblKLD2(na.omit(vector1), na.omit(vector2))$KLD
-          }, amrdd = {
-          amrdd(na.omit(vector1), na.omit(vector2))
-          }, euc = {
-          EucDist(na.omit(vector1), na.omit(vector2))
-          })
-        }
-        return(Stat)
-      }
-
-      chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
-      if (nzchar(chk) && chk == "TRUE") {
-        num_workers <- 2L
-      } else {
-        num_workers <- parallel::detectCores()
-      }
+      num_workers <- parallel::detectCores()
       nProc <- min(num_workers - 1, MaxCores)
 
       list.of.seeds.all <- 1:nTrials + Seed
@@ -98,7 +58,9 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
         list.of.seeds <- split(list.of.seeds.all, 1)
       }
 
-      # Main part
+      # Main part. For reasons of computing speed, three separate
+      # versions are available, i.e., for Windows, Linux, and for single-core
+      # processing.
       nlist.of.seeds <- as.integer(unlist(lapply(list.of.seeds, length)))
       ADstatAll <- vector()
       ReducedDataI <- list()
@@ -112,38 +74,20 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           x <- integer()
           ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar%
             {
-            set.seed(list.of.seeds[[i]][x])
-            sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
-            ReducedDataList <- subset(dfx, sample == TRUE)
-            RemovedDataList <- subset(dfx, sample == FALSE)
-            ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-              1)])
-            return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
-              ADv = ADv))
+            MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
+              Size = Size, Seed = list.of.seeds[[i]][x])
             }
           doParallel::stopImplicitCluster()
           }, {
           ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
-            set.seed(list.of.seeds[[i]][x])
-            sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
-            ReducedDataList <- subset(dfx, sample == TRUE)
-            RemovedDataList <- subset(dfx, sample == FALSE)
-            ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-            1)])
-            return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
-            ADv = ADv))
+            MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
+            Size = Size, Seed = list.of.seeds[[i]][x])
           }, mc.cores = nProc)
           })
         } else {
           ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
-          set.seed(list.of.seeds[[i]][x])
-          sample <- caTools::sample.split(dfx$Cls, SplitRatio = Size/nrow(dfx))
-          ReducedDataList <- subset(dfx, sample == TRUE)
-          RemovedDataList <- subset(dfx, sample == FALSE)
-          ADv <- mapply(CompDistrib, dfx[1:(ncol(dfx) - 1)], ReducedDataList[1:(ncol(ReducedDataList) -
-            1)])
-          return(list(ReducedDataList = ReducedDataList, RemovedDataList = RemovedDataList,
-            ADv = ADv))
+          MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
+            Size = Size, Seed = list.of.seeds[[i]][x])
           })
         }
 
