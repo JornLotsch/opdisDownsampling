@@ -40,7 +40,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       num_workers <- parallel::detectCores()
       nProc <- min(num_workers - 1, MaxCores)
 
-      list.of.seeds.all <- 1:nTrials + Seed
+      list.of.seeds.all <- 1:nTrials + Seed - 1
 
       if (!missing(JobSize))
         JobSize <- JobSize else {
