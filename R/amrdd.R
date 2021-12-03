@@ -10,9 +10,9 @@ amrdd <- function(vector1, vector2) {
   y2 <- data.frame(dens2)
   dfPDF <- merge(y1, y2, by = "Kernels")
   dfPDF$Diff <- dfPDF$SDH.x - dfPDF$SDH.y
-  dfPDF$Mean <- (dfPDF$SDH.x + dfPDF$SDH.y)/2
+  dfPDF$Mean <- (dfPDF$SDH.x + dfPDF$SDH.y) / 2
   dfPDF$Mean[dfPDF$Mean == 0] <- 1
-  dfPDF$RelDiff <- dfPDF$Diff/dfPDF$Mean
+  dfPDF$RelDiff <- dfPDF$Diff / dfPDF$Mean
   RelDiff <- abs(mean(dfPDF$RelDiff, na.rm = TRUE))
   return(RelDiff)
 }

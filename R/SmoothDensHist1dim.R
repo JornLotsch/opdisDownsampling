@@ -14,16 +14,20 @@ nanmax <- function(Data) {
 SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
   if (length(x) == 0) {
     warning("SmoothDensHist1dim: Size of x is zero.", call. = FALSE)
-    if (is.null(KernelsOrNbins) == TRUE)
-      Kernels = 1 else Kernels = KernelsOrNbins
-    SDH = Kernels * 0
+    if (is.null(KernelsOrNbins) == TRUE) {
+      Kernels <- 1
+    } else {
+      Kernels <- KernelsOrNbins
+    }
+    SDH <- Kernels * 0
   } else {
     requireNamespace("pracma")
     requireNamespace("caTools")
 
     smooth1D <- function(Y, lambda) {
-      if (is.vector(Y))
+      if (is.vector(Y)) {
         Y <- as.matrix(Y)
+      }
       Y[is.na(Y)] <- 0
       dd <- dim(Y)
       m <- dd[1]
@@ -34,14 +38,18 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
       Z <- solve((E + P), Y)
       return(Z)
     }
-    if (missing(lambda))
+    if (missing(lambda)) {
       lambda <- 20
-    if (missing(SDHinPercent))
+    }
+    if (missing(SDHinPercent)) {
       SDHinPercent <- 0
-    if (is.null(KernelsOrNbins))
+    }
+    if (is.null(KernelsOrNbins)) {
       KernelsOrNbins <- 200
-    if (length(KernelsOrNbins) < 1)
+    }
+    if (length(KernelsOrNbins) < 1) {
       KernelsOrNbins <- 200
+    }
 
     x <- x[is.finite(x)]
     n <- length(x)
@@ -83,8 +91,8 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
         edges1 <- c(-Inf, edges1[2:(end - 1)], Inf)
         V <- pracma::histc(x, edges1)
         dummy <- V$cnt
-        H <- dummy/n
-        SDH <- smooth1D(H, nbins/lambda)
+        H <- dummy / n
+        SDH <- smooth1D(H, nbins / lambda)
         SDH <- as.vector(SDH)
       }
 
@@ -104,10 +112,10 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent, lambda) {
       if (Area < 1e-10) {
         SDH <- rep(0, length(Kernels))
       } else {
-        SDH <- SDH/Area
+        SDH <- SDH / Area
       }
     } else {
-      SDH <- SDH/nanmax(SDH)
+      SDH <- SDH / nanmax(SDH)
     }
   }
   return(list(Kernels = Kernels, SDH = SDH))

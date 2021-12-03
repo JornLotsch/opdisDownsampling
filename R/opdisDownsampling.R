@@ -9,7 +9,7 @@
 #' @import foreach
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
-  MaxCores = getOption("mc.cores", 2L), JobSize = 10000, PCAimportance = FALSE) {
+                              MaxCores = getOption("mc.cores", 2L), JobSize = 10000, PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   if (hasArg("Cls") == TRUE) {
     if (length(Cls) != nrow(dfx)) {
@@ -23,37 +23,48 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   if (Size >= nrow(dfx)) {
     warning("opdisDownsampling: Size >= length of 'Data'.
     Nothing to downsample.",
-      call. = FALSE)
+      call. = FALSE
+    )
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
     if (is.numeric(as.matrix(na.omit(Data))) == FALSE) {
       warning("opdisDownsampling: Only numeric data allowed.
     Nothing to downsample.",
-        call. = FALSE)
+        call. = FALSE
+      )
       ReducedData <- dfx
       RemovedData <- vector()
     } else {
-      if (!missing(Seed))
-        Seed <- Seed else Seed <- 42
+      if (!missing(Seed)) {
+        Seed <- Seed
+      } else {
+        Seed <- 42
+      }
 
       num_workers <- parallel::detectCores()
       nProc <- min(num_workers - 1, MaxCores)
 
       list.of.seeds.all <- 1:nTrials + Seed - 1
 
-      if (!missing(JobSize))
-        JobSize <- JobSize else {
-        switch(Sys.info()[["sysname"]], Windows = {
-          JobSize <- as.numeric(memuse::Sys.meminfo()$freeram) * 0.8 * nTrials *
-          (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
-        }, JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials *
-          (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2]))
+      if (!missing(JobSize)) {
+        JobSize <- JobSize
+      } else {
+        switch(Sys.info()[["sysname"]],
+          Windows = {
+            JobSize <- as.numeric(memuse::Sys.meminfo()$freeram) * 0.8 * nTrials *
+              (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+          },
+          JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials *
+            (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+        )
       }
 
       if (nProc > 1) {
-        list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all)/max(nTrials/nProc,
-          JobSize)))
+        list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all) / max(
+          nTrials / nProc,
+          JobSize
+        )))
       } else {
         list.of.seeds <- split(list.of.seeds.all, 1)
       }
@@ -65,29 +76,37 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
       ADstatAll <- vector()
       ReducedDataI <- list()
       RemovedDataI <- list()
-      for (i in 1:length(list.of.seeds)) {
+      for (i in seq(list.of.seeds)) {
         ADstat <- vector()
         if (nProc > 1) {
-          switch(Sys.info()[["sysname"]], Windows = {
-          requireNamespace("foreach")
-          doParallel::registerDoParallel(nProc)
-          x <- integer()
-          ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar%
+          switch(Sys.info()[["sysname"]],
+            Windows = {
+              requireNamespace("foreach")
+              doParallel::registerDoParallel(nProc)
+              x <- integer()
+              ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar% {
+                MakeReducedDataMat(
+                  DataAndClasses = dfx, TestStat = TestStat,
+                  Size = Size, Seed = list.of.seeds[[i]][x]
+                )
+              }
+              doParallel::stopImplicitCluster()
+            },
             {
-            MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
-              Size = Size, Seed = list.of.seeds[[i]][x])
+              ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
+                MakeReducedDataMat(
+                  DataAndClasses = dfx, TestStat = TestStat,
+                  Size = Size, Seed = list.of.seeds[[i]][x]
+                )
+              }, mc.cores = nProc)
             }
-          doParallel::stopImplicitCluster()
-          }, {
-          ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
-            MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
-            Size = Size, Seed = list.of.seeds[[i]][x])
-          }, mc.cores = nProc)
-          })
+          )
         } else {
           ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
-          MakeReducedDataMat(DataAndClasses = dfx, TestStat = TestStat,
-            Size = Size, Seed = list.of.seeds[[i]][x])
+            MakeReducedDataMat(
+              DataAndClasses = dfx, TestStat = TestStat,
+              Size = Size, Seed = list.of.seeds[[i]][x]
+            )
           })
         }
 
@@ -95,14 +114,17 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
         ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
 
         if (PCAimportance == TRUE & nlist.of.seeds[i] > 1 & ncol(dfx) > 2) {
-          pca1 <- prcomp(dfx[1:(ncol(dfx) - 1)], retx = TRUE, center = TRUE,
-          scale = TRUE)
+          pca1 <- prcomp(dfx[1:(ncol(dfx) - 1)],
+            retx = TRUE, center = TRUE,
+            scale = TRUE
+          )
           is.integer0 <- function(x) {
-          is.integer(x) && length(x) == 0L
+            is.integer(x) && length(x) == 0L
           }
           selectedVars <- which(names(dfx) %in% relevant_PCAvariables(res.pca = pca1))
-          if (is.integer0(selectedVars) == FALSE)
-          ADstatMat <- ADstatMat[c(selectedVars), ]
+          if (is.integer0(selectedVars) == FALSE) {
+            ADstatMat <- ADstatMat[c(selectedVars), ]
+          }
         }
 
         BestTrial <- which.min(apply(ADstatMat, 2, function(x) max(x)))
