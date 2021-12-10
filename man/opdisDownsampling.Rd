@@ -12,7 +12,7 @@ TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
 \arguments{
  \item{Data}{the (numerical!) data as a vector, matrix or data frame.}
  \item{Cls}{the class information, if any, as a vector of similar length as instances in the data.}
- \item{Size}{the percentage of instances per class to be drawn.}
+ \item{Size}{the total number of instances across all classes to be drawn.}
  \item{Seed}{a predefined seed to modify the results.}
  \item{nTrials}{how many samples to choose from should be randomly drawn.}
  \item{TestStat}{statistical criterion for similarity judgment.}
