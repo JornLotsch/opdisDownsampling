@@ -19,128 +19,131 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     Cls <- rep(1, nrow(dfx))
   }
   dfx$Cls <- Cls
-
+  
   if (Size >= nrow(dfx)) {
     warning("opdisDownsampling: Size >= length of 'Data'.
-    Nothing to downsample.",
-      call. = FALSE
-    )
+    Nothing to downsample.", call. = FALSE )
     ReducedData <- dfx
     RemovedData <- vector()
   } else {
-    if (is.numeric(as.matrix(na.omit(Data))) == FALSE) {
-      warning("opdisDownsampling: Only numeric data allowed.
-    Nothing to downsample.",
-        call. = FALSE
-      )
-      ReducedData <- dfx
-      RemovedData <- vector()
+    if (Size == 0) {
+      warning("opdisDownsampling: Size = 0.
+    All data will be removed.", call. = FALSE )
+      ReducedData <- vector()
+      RemovedData <- dfx
     } else {
-      if (!missing(Seed)) {
-        Seed <- Seed
+      if (is.numeric(as.matrix(na.omit(Data))) == FALSE) {
+        warning("opdisDownsampling: Only numeric data allowed.
+    Nothing to downsample.", call. = FALSE )
+        ReducedData <- dfx
+        RemovedData <- vector()
       } else {
-        Seed <- 42
-      }
-
-      num_workers <- parallel::detectCores()
-      nProc <- min(num_workers - 1, MaxCores)
-
-      list.of.seeds.all <- 1:nTrials + Seed - 1
-
-      if (!missing(JobSize)) {
-        JobSize <- JobSize
-      } else {
-        switch(Sys.info()[["sysname"]],
-          Windows = {
-            JobSize <- as.numeric(memuse::Sys.meminfo()$freeram) * 0.8 * nTrials *
-              (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
-          },
-          JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials *
-            (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
-        )
-      }
-
-      if (nProc > 1) {
-        list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all) / max(
-          nTrials / nProc,
-          JobSize
-        )))
-      } else {
-        list.of.seeds <- split(list.of.seeds.all, 1)
-      }
-
-      # Main part. For reasons of computing speed, three separate
-      # versions are available, i.e., for Windows, Linux, and for single-core
-      # processing.
-      nlist.of.seeds <- as.integer(unlist(lapply(list.of.seeds, length)))
-      ADstatAll <- vector()
-      ReducedDataI <- list()
-      RemovedDataI <- list()
-      for (i in seq(list.of.seeds)) {
-        ADstat <- vector()
-        if (nProc > 1) {
-          switch(Sys.info()[["sysname"]],
-            Windows = {
-              requireNamespace("foreach")
-              doParallel::registerDoParallel(nProc)
-              x <- integer()
-              ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar% {
-                MakeReducedDataMat(
-                  DataAndClasses = dfx, TestStat = TestStat,
-                  Size = Size, Seed = list.of.seeds[[i]][x]
-                )
-              }
-              doParallel::stopImplicitCluster()
-            },
-            {
-              ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
-                MakeReducedDataMat(
-                  DataAndClasses = dfx, TestStat = TestStat,
-                  Size = Size, Seed = list.of.seeds[[i]][x]
-                )
-              }, mc.cores = nProc)
-            }
-          )
+        if (!missing(Seed)) {
+          Seed <- Seed
         } else {
-          ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
-            MakeReducedDataMat(
-              DataAndClasses = dfx, TestStat = TestStat,
-              Size = Size, Seed = list.of.seeds[[i]][x]
-            )
-          })
+          Seed <- 42
         }
-
-        ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
-        ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
-
-        if (PCAimportance == TRUE & nlist.of.seeds[i] > 1 & ncol(dfx) > 2) {
-          pca1 <- prcomp(dfx[1:(ncol(dfx) - 1)],
-            retx = TRUE, center = TRUE,
-            scale = TRUE
+        
+        num_workers <- parallel::detectCores()
+        nProc <- min(num_workers - 1, MaxCores)
+        
+        list.of.seeds.all <- 1:nTrials + Seed - 1
+        
+        if (!missing(JobSize)) {
+          JobSize <- JobSize
+        } else {
+          switch(Sys.info()[["sysname"]],
+                 Windows = {
+                   JobSize <- as.numeric(memuse::Sys.meminfo()$freeram) * 0.8 * nTrials *
+                     (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
+                 },
+                 JobSize <- as.numeric(benchmarkme::get_ram()) * 0.8 * nTrials *
+                   (dim(subset(dfx, select = -c(Cls)))[1] * dim(subset(dfx, select = -c(Cls)))[2])
           )
-          is.integer0 <- function(x) {
-            is.integer(x) && length(x) == 0L
-          }
-          selectedVars <- which(names(dfx) %in% relevant_PCAvariables(res.pca = pca1))
-          if (is.integer0(selectedVars) == FALSE) {
-            ADstatMat <- ADstatMat[c(selectedVars), ]
-          }
         }
-
-        BestTrial <- which.min(apply(ADstatMat, 2, function(x) max(x)))
-        BestTrialStat <- min(apply(ADstatMat, 2, function(x) max(x)))
-        ADstatAll <- append(ADstatAll, BestTrialStat)
-        ReducedDataI[[i]] <- ReducedDataMat[[BestTrial]][["ReducedDataList"]]
-        RemovedDataI[[i]] <- ReducedDataMat[[BestTrial]][["RemovedDataList"]]
-      }
-
-      BestTrialAll <- which.min(ADstatAll)
-      ReducedData <- ReducedDataI[[BestTrialAll]]
-      RemovedData <- RemovedDataI[[BestTrialAll]]
-
-      if (hasArg("Cls") == FALSE) {
-        ReducedData <- as.vector(ReducedData$Data)
-        RemovedData <- as.vector(RemovedData$Data)
+        
+        if (nProc > 1) {
+          list.of.seeds <- split(list.of.seeds.all, ceiling(seq_along(list.of.seeds.all) / max(
+            nTrials / nProc,
+            JobSize
+          )))
+        } else {
+          list.of.seeds <- split(list.of.seeds.all, 1)
+        }
+        
+        # Main part. For reasons of computing speed, three separate
+        # versions are available, i.e., for Windows, Linux, and for single-core
+        # processing.
+        nlist.of.seeds <- as.integer(unlist(lapply(list.of.seeds, length)))
+        ADstatAll <- vector()
+        ReducedDataI <- list()
+        RemovedDataI <- list()
+        for (i in seq(list.of.seeds)) {
+          ADstat <- vector()
+          if (nProc > 1) {
+            switch(Sys.info()[["sysname"]],
+                   Windows = {
+                     requireNamespace("foreach")
+                     doParallel::registerDoParallel(nProc)
+                     x <- integer()
+                     ReducedDataMat <- foreach::foreach(x = 1:nlist.of.seeds[i]) %dopar% {
+                       MakeReducedDataMat(
+                         DataAndClasses = dfx, TestStat = TestStat,
+                         Size = Size, Seed = list.of.seeds[[i]][x]
+                       )
+                     }
+                     doParallel::stopImplicitCluster()
+                   },
+                   {
+                     ReducedDataMat <- parallel::mclapply(1:nlist.of.seeds[i], function(x) {
+                       MakeReducedDataMat(
+                         DataAndClasses = dfx, TestStat = TestStat,
+                         Size = Size, Seed = list.of.seeds[[i]][x]
+                       )
+                     }, mc.cores = nProc)
+                   }
+            )
+          } else {
+            ReducedDataMat <- lapply(1:nlist.of.seeds[i], function(x) {
+              MakeReducedDataMat(
+                DataAndClasses = dfx, TestStat = TestStat,
+                Size = Size, Seed = list.of.seeds[[i]][x]
+              )
+            })
+          }
+          
+          ADstat <- rbind(ADstat, unlist(lapply(ReducedDataMat, "[[", "ADv")))
+          ADstatMat <- data.frame(matrix(ADstat, ncol = nlist.of.seeds[i]))
+          
+          if (PCAimportance == TRUE & nlist.of.seeds[i] > 1 & ncol(dfx) > 2) {
+            pca1 <- prcomp(dfx[1:(ncol(dfx) - 1)],
+                           retx = TRUE, center = TRUE,
+                           scale = TRUE
+            )
+            is.integer0 <- function(x) {
+              is.integer(x) && length(x) == 0L
+            }
+            selectedVars <- which(names(dfx) %in% relevant_PCAvariables(res.pca = pca1))
+            if (is.integer0(selectedVars) == FALSE) {
+              ADstatMat <- ADstatMat[c(selectedVars), ]
+            }
+          }
+          
+          BestTrial <- which.min(apply(ADstatMat, 2, function(x) max(x)))
+          BestTrialStat <- min(apply(ADstatMat, 2, function(x) max(x)))
+          ADstatAll <- append(ADstatAll, BestTrialStat)
+          ReducedDataI[[i]] <- ReducedDataMat[[BestTrial]][["ReducedDataList"]]
+          RemovedDataI[[i]] <- ReducedDataMat[[BestTrial]][["RemovedDataList"]]
+        }
+        
+        BestTrialAll <- which.min(ADstatAll)
+        ReducedData <- ReducedDataI[[BestTrialAll]]
+        RemovedData <- RemovedDataI[[BestTrialAll]]
+        
+        if (hasArg("Cls") == FALSE) {
+          ReducedData <- as.vector(ReducedData$Data)
+          RemovedData <- as.vector(RemovedData$Data)
+        }
       }
     }
   }
