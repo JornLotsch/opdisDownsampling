@@ -19,24 +19,25 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     Cls <- rep(1, nrow(dfx))
   }
   dfx$Cls <- Cls
+  dfxempty <- dfx[0,]
   
   if (Size >= nrow(dfx)) {
     warning("opdisDownsampling: Size >= length of 'Data'.
     Nothing to downsample.", call. = FALSE )
     ReducedData <- dfx
-    RemovedData <- vector()
+    RemovedData <- dfxempty
   } else {
     if (Size == 0) {
       warning("opdisDownsampling: Size = 0.
     All data will be removed.", call. = FALSE )
-      ReducedData <- vector()
+      ReducedData <- dfxempty
       RemovedData <- dfx
     } else {
       if (is.numeric(as.matrix(na.omit(Data))) == FALSE) {
         warning("opdisDownsampling: Only numeric data allowed.
     Nothing to downsample.", call. = FALSE )
         ReducedData <- dfx
-        RemovedData <- vector()
+        RemovedData <- dfxempty
       } else {
         if (!missing(Seed)) {
           Seed <- Seed
