@@ -4,12 +4,14 @@
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
 CompDistrib <- function(vector1, vector2, TestStat) {
-  if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) == 0) {
-    Stat <- 1e+27
+  if (length(vector1[!is.na(vector1)]) == 0 |
+      length(vector2[!is.na(vector2)]) == 0) {
+    Stati <- 1e+27
   } else {
-    Stat <- switch(TestStat,
+    Stati <- switch(
+      TestStat,
       ad = {
-        twosamples::ad_stat(na.omit(vector1), na.omit(vector2))
+        twosamples::ad_stat(vector1, vector2)
       },
       kuiper = {
         twosamples::kuiper_stat(na.omit(vector1), na.omit(vector2))
@@ -37,5 +39,5 @@ CompDistrib <- function(vector1, vector2, TestStat) {
       }
     )
   }
-  return(Stat)
+  return(Stati)
 }
