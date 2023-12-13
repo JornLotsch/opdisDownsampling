@@ -1,20 +1,17 @@
-citHeader("To cite opdisDownsampling in publications use:")
-
-citEntry(entry = "Article",
-         title        = "Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling)",
-         author       = personList(as.person("Jorn Lotsch"),
-                                   as.person("Sebastian Malkusch"),
-                                   as.person("Alfred Ultsch")),
-         journal      = "PLoS One",
-         year         = "2021",
-         volume       = "16",
-         number       = "9",
-         pages        = "e0255838",
-         url          = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838",
-         doi          = "10.1371/journal.pone.0255838",
-
-         textVersion  = paste("Jorn Lotsch, Sebastian Malkusch, and Alfred Ultsch (2021).",
+bibentry(bibtype    = "Article",
+  title = "Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling)",
+  journal = "PLoS One",
+  volume = "16",
+  number = "9",
+  pages = "e0255838",
+  year = "2021",
+  issn = "2352-9148",
+  doi = "10.1371/journal.pone.0255838",
+  url = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838",
+  author = "Jörn Lötsch and Sebastian Malkusch and Alfred Ultsch",
+  textVersion  = paste("Jorn Lotsch, Sebastian Malkusch, and Alfred Ultsch (2021).",
                               "Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling).",
                               "PLoS One 2021 Aug 5;16(8):e0255838.",
                               "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838.")
 )
+
