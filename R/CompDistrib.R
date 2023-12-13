@@ -3,6 +3,7 @@
 #' @importFrom stats ks.test prcomp na.omit
 #' @importFrom EucDist EucDist
 #' @importFrom KullbLeiblKLD2 KullbLeiblKLD2
+#' @importFrom amrdd amrdd
 CompDistrib <- function(vector1, vector2, TestStat) {
   if (length(vector1[!is.na(vector1)]) * length(vector2[!is.na(vector2)]) == 0) {
     Stat <- 1e+27
