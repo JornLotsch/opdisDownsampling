@@ -3,8 +3,6 @@
 #' @useDynLib(opdisDownsampling, .registration = TRUE)
 #' @importFrom methods hasArg
 #' @importFrom parallel detectCores
-#' @importFrom benchmarkme get_ram
-#' @importFrom memuse Sys.meminfo
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #' @import foreach
 #' @export
@@ -70,20 +68,27 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           )
           selectedVars <- names(dfx)[which(names(dfx) %in% relevant_PCAvariables(res.pca = pca1))]
         }
-        
-# Perform sampling and anaylize picked data subsets
-        
-        ReducedDiag <- 
-          pbmcapply::pbmclapply(list.of.seeds, function(seed) {
+
+# Central sampling fucntion        
+        make_and_analyse_subsample <- function(DataAndClasses, TestStat, Size, Seed) {  
           df_reduced <- MakeReducedDataMat(
-            DataAndClasses = dfx, TestStat = TestStat,
-            Size = Size, Seed = seed
+            DataAndClasses = DataAndClasses, TestStat = TestStat,
+            Size = Size, Seed = Seed
           )
           
           ADv <- df_reduced$ADv[selectedVars]
           
           return(ADv)
-          
+        }        
+        
+# Perform sampling and anaylize picked data subsets
+        
+        ReducedDiag <- 
+          pbmcapply::pbmclapply(list.of.seeds, function(seed) {
+            make_and_analyse_subsample(
+              DataAndClasses = dfx, TestStat = TestStat,
+              Size = Size, Seed = seed
+            )
         }, mc.cores = nProc)
         
 # Find best subsample 
@@ -99,6 +104,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           Size = Size, Seed = list.of.seeds[BestTrial]
         )
         
+        # prepaire results
         ReducedData <- df_reduced_final$ReducedDataList
         RemovedData <- df_reduced_final$RemovedDataList
         
@@ -106,6 +112,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
           ReducedData <- within(ReducedData, rm(Cls))
           RemovedData <- within(RemovedData, rm(Cls))
         }
+        
+        return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData)))
 }
 
         
