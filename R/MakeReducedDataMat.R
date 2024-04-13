@@ -17,11 +17,11 @@
 #'     downsampled distributions.
 #'
 #' @importFrom caTools sample.split
-#' @importFrom stats CompDistrib
 #'
 MakeReducedDataMat <- function(DataAndClasses, TestStat, Size, Seed) {
   # Set the random seed for reproducibility
   set.seed(Seed)
+  ADv <- NULL
   
   # Perform class-proportional downsampling
   sample <- caTools::sample.split(DataAndClasses$Cls, SplitRatio = Size)
@@ -29,12 +29,14 @@ MakeReducedDataMat <- function(DataAndClasses, TestStat, Size, Seed) {
   RemovedDataList <- DataAndClasses[!sample, ]
   
   # Compare the original and downsampled distributions
-  ADv <- mapply(
+  if (!is.null(TestStat) ) {
+    ADv <- mapply(
     CompDistrib,
     vector1 = DataAndClasses[, 1:(ncol(DataAndClasses) - 1)],
     vector2 = ReducedDataList[, 1:(ncol(ReducedDataList) - 1)],
     MoreArgs = list(TestStat = TestStat)
   )
+  }
   
   return(list(
     ReducedDataList = ReducedDataList,
