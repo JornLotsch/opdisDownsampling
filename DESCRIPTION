@@ -2,7 +2,7 @@ Package: opdisDownsampling
 Type: Package
 Title: Optimal Distribution Preserving Down-Sampling of Bio-Medical
         Data
-Version: 0.8.3
+Version: 0.9
 Description: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
 Depends: R (>= 3.5.0)
 Imports: parallel, graphics, methods, stats, caTools, pracma,
