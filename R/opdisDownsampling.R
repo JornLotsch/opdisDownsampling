@@ -59,10 +59,10 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
 
 # Identify variable relevant according to PCA projection 
         
-        selectedVars <- names(within(dfx, rm(Cls)))
+        selectedVars <- names(dfx[,-ncol(dfx)]
         if (PCAimportance == TRUE & length(list.of.seeds) > 1 & ncol(dfx) > 2) {
           pca1 <- 
-            prcomp(within(dfx, rm(Cls)),
+            prcomp(dfx[,-ncol(dfx)],
                          retx = TRUE, center = TRUE,
                          scale = TRUE
           )
@@ -109,8 +109,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
         RemovedData <- df_reduced_final$RemovedDataList
         
         if (hasArg("Cls") == FALSE) {
-          ReducedData <- within(ReducedData, rm(Cls))
-          RemovedData <- within(RemovedData, rm(Cls))
+          ReducedData <- ReducedData[,-ncol(ReducedData)]
+          RemovedData <- RemovedData[,-ncol(RemovedData)]
         }
         
         return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData)))

@@ -32,8 +32,8 @@ MakeReducedDataMat <- function(DataAndClasses, TestStat, Size, Seed) {
   if (!is.null(TestStat) ) {
     ADv <- mapply(
     CompDistrib,
-    vector1 = DataAndClasses[, 1:(ncol(DataAndClasses) - 1)],
-    vector2 = ReducedDataList[, 1:(ncol(ReducedDataList) - 1)],
+    vector1 = DataAndClasses[, -ncol(DataAndClasses)],
+    vector2 = ReducedDataList[, -ncol(ReducedDataList)],
     MoreArgs = list(TestStat = TestStat)
   )
   }
