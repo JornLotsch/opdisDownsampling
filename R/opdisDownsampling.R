@@ -28,7 +28,7 @@
 #' @importFrom pbmcapply pbmclapply
 #' @import foreach
 #' @export
-opdisDownsampling <- function(Data, Cls = NULL, Size, Seed = NULL, nTrials = 1000, TestStat = "ad",
+opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE) {
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
@@ -69,7 +69,7 @@ opdisDownsampling <- function(Data, Cls = NULL, Size, Seed = NULL, nTrials = 100
   }
   
   # Initialize environment
-  if (is.null(Seed)) {
+  if (missing(Seed)) {
     Seed <- as.integer(get_seed()[1])
   }
   list.of.seeds <- 1:nTrials + Seed - 1
@@ -94,8 +94,8 @@ opdisDownsampling <- function(Data, Cls = NULL, Size, Seed = NULL, nTrials = 100
   RemovedData <- df_reduced_final$RemovedDataList
   
   if (Clsarg_missing) {
-    ReducedData <- ReducedData[, 1:(ncol(ReducedData) - 1)]
-    RemovedData <- RemovedData[, 1:(ncol(RemovedData) - 1)]
+    ReducedData <- ReducedData[1:(ncol(ReducedData) - 1)]
+    RemovedData <- RemovedData[1:(ncol(RemovedData) - 1)]
   }
   
   return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData)))

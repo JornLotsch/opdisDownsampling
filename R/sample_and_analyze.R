@@ -26,7 +26,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   # Identify relevant variables according to PCA projection, if selected
   selectedVars <- names(DataAndClasses)[1:(ncol(DataAndClasses)-1)]
   if (PCAimportance && length(list.of.seeds) > 1 && ncol(DataAndClasses) > 2) {
-    pca1 <- prcomp(DataAndClasses[, -ncol(DataAndClasses)], retx = TRUE, center = TRUE, scale = TRUE)
+    pca1 <- prcomp(DataAndClasses[1:(ncol(DataAndClasses)-1)], retx = TRUE, center = TRUE, scale = TRUE)
     selectedVars_pca <- names(DataAndClasses)[which(names(DataAndClasses) %in% relevant_PCAvariables(pca1))]
     if (length(selectedVars_pca) > 0) selectedVars <- selectedVars_pca
   }
