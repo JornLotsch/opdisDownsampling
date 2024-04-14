@@ -10,10 +10,6 @@
 #'
 #' @return A vector of the names of the relevant variables.
 #'
-is.integer0 <- function(x) {
-  is.integer(x) && length(x) == 0L
-}
-
 relevant_PCAvariables <- function(res.pca) {
   # Define a helper function to calculate the variable coordinates
   var_coord <- function(loadings, comp.sdev) {

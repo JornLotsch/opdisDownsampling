@@ -6,8 +6,7 @@
 }
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
-TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  JobSize = 10000, PCAimportance = FALSE)
+TestStat = "ad", MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE)
 }
 \arguments{
  \item{Data}{the (numerical!) data as a vector, matrix or data frame.}
@@ -17,7 +16,6 @@ TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
  \item{nTrials}{how many samples to choose from should be randomly drawn.}
  \item{TestStat}{statistical criterion for similarity judgment.}
  \item{MaxCores}{maximum number of cpu cores to use for parallel computing.}
- \item{JobSize}{how many samples can be drawn at once.}
  \item{PCAimportance}{PCA based feature selection; only variables important in PCA projection are considered.}
 }
 \value{
