@@ -10,7 +10,7 @@ Imports: parallel, graphics, methods, stats, caTools, pracma,
 LazyData: true
 Suggests: testthat
 License: GPL-3
-URL: https://cran.r-project.org/package=opdisDownsampling
+URL: https://github.com/JornLotsch/opdisDownsampling
 Encoding: UTF-8
 Author: Jorn Lotsch [aut,cre] (<https://orcid.org/0000-0002-5818-6958>),
   Sebastian Malkusch [aut] (<https://orcid.org/0000-0001-6766-140X>),
