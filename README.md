@@ -1,4 +1,4 @@
-# opdisDownsampling: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
+# opdisDownsampling: An optimized method for distribution-preserving class-proportional downsampling of biomedical data.
 
 
 **opdisDownsampling** is an R package for optimal, *distribution-preserving, class-proportional down-sampling* of bio-medical data. It provides methods to reduce dataset size while maintaining both the class distribution and the statistical properties of the original data.
