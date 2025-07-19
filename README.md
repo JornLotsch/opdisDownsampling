@@ -9,15 +9,15 @@ This repository contains the full source code of the package, as available on [C
 
 ## Features
 
-- **Distribution-Preserving Down-Sampling**: Selects a subset of samples whose statistical distribution closely matches the original dataset.
+- **Distribution-preserving downsampling**: Selects a subset of samples whose statistical distribution closely matches the original dataset.
 
 <img src="./DownsamplingPDFartificial10PDEraw.svg">
 
 
 
-- **Class-Proportional Selection**: Maintains the proportions of different classes within the down-sampled data.
-- **Parallel Computing Support**: Can exploit multiple CPU cores for efficient processing.
-- **Flexible Test Statistics**: Supports several statistical tests for distribution comparison.
+- **Class-proportional selection**: Maintains the proportions of different classes within the down-sampled data.
+- **Parallel computing support**: Can exploit multiple CPU cores for efficient processing.
+- **Flexible test statistics**: Supports several statistical tests for distribution comparison.
 
 ---
 
@@ -49,7 +49,7 @@ devtools::install("path/to/opdisDownsampling")
 
 The main function is `opdisDownsampling()`.
 
-### Basic Example
+### Basic example
 
 ```r
 library(opdisDownsampling)
@@ -72,7 +72,7 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 | `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
 
-### Available `TestStat` Options
+### Available `TestStat` options
 
 | Value     | Description                                                                                  |
 |-----------|----------------------------------------------------------------------------------------------|
@@ -107,7 +107,7 @@ See the [reference manual](https://cran.r-project.org/web/packages/opdisDownsamp
 
 ---
 
-## Authors and License
+## Authors and license
 
 - **Jorn Lotsch** (author, maintainer)  
 - **Sebastian Malkusch** (author)  
@@ -124,7 +124,7 @@ Lötsch J, Malkusch S, Ultsch A. Optimal distribution-preserving downsampling of
 
 ---
 
-## Related Links
+## Related links
 
 - [CRAN package page](https://cran.r-project.org/package=opdisDownsampling)
 - [Original publication (PLoS ONE)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838)
