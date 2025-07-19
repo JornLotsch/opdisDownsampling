@@ -1,0 +1,13 @@
+^\.github
+^docs
+^examples
+^data-raw
+^analyses
+^issues
+^\.idea
+^.*\.Rproj$
+^\.Rproj\.user$
+.*\.png$
+.*\.svg$
+^plots/
+.*\.html$
