@@ -3,7 +3,7 @@
 
 **opdisDownsampling** is an R package for optimal, *distribution-preserving, class-proportional down-sampling* of bio-medical data. It provides methods to reduce dataset size while maintaining both the class distribution and the statistical properties of the original data.
 
-This repository contains the full source code of the package, as available on [CRAN][2], and is described in the [original publication](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838).
+This repository contains the full source code of the package, as available on [CRAN](https://cran.r-project.org/package=opdisDownsampling), and is described in the [original publication](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838).
 
 ---
 
@@ -57,11 +57,7 @@ library(opdisDownsampling)
 data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
   Size = 50, MaxCores = 1)
-}
-
 ```
-
-### Arguments
 
 ### Arguments
 
