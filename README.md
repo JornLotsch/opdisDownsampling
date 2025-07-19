@@ -1,4 +1,5 @@
-# opdisDownsampling
+# opdisDownsampling: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
+
 
 **opdisDownsampling** is an R package for optimal, *distribution-preserving, class-proportional down-sampling* of bio-medical data. It provides methods to reduce dataset size while maintaining both the class distribution and the statistical properties of the original data.
 
@@ -121,14 +122,13 @@ See the [reference manual](https://cran.r-project.org/web/packages/opdisDownsamp
 
 ## Citing opdisDownsampling
 
-If you use this package, please cite the CRAN package and the original paper (see above).
+If you use this package, please cite the CRAN package and the original paper:
+
+Lötsch J, Malkusch S, Ultsch A. Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling). PLoS One. 2021 Aug 5;16(8):e0255838. doi: 10.1371/journal.pone.0255838. PMID: 34352006; PMCID: PMC8341664.
 
 ---
 
 ## Related Links
 
-- [CRAN package page][2]
+- [CRAN package page](https://cran.r-project.org/package=opdisDownsampling)
 - [Original publication (PLoS ONE)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838)
-
-[2]: https://cran.r-project.org/package=opdisDownsampling
-[5]: https://cran.r-project.org/web/packages/opdisDownsampling/opdisDownsampling.pdf
