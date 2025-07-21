@@ -8,7 +8,7 @@
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
   PCAimportance = FALSE, CheckRemoved = FALSE,
-  chunk_size = NULL, verbose = FALSE)
+  JobSize = NULL, verbose = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
@@ -45,7 +45,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases,
       which can be used for data splits into training/test and validation.}
 
- \item{chunk_size}{Integer specifying the number of trials to process in each memory-efficient chunk.
+ \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
       If \code{NULL} (default), an optimal chunk size is automatically calculated based on data dimensions,
       number of trials, available system memory, and number of processor cores. Smaller chunk sizes use less
       memory but may increase computational overhead, while larger chunk sizes are more efficient but require
@@ -92,7 +92,7 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 ## Example: Down-sample with custom chunk size and verbose output
 data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, MaxCores = 1, chunk_size = 25, verbose = TRUE)
+  Size = 50, MaxCores = 1, JobSize = 25, verbose = TRUE)
 
 ## Example: Memory-efficient processing of large dataset with many trials
 \dontrun{

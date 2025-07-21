@@ -15,7 +15,7 @@
 #' @param nProc The number of cores to use for parallel processing.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part
 #'   of the data for distribution equality with the original.
-#' @param chunk_size Number of seeds to process in each chunk (default: min(50, length(list.of.seeds)/nProc))
+#' @param JobSize Number of seeds to process in each chunk (default: min(50, length(list.of.seeds)/nProc))
 #'
 #' @return A list of the results from the `make_and_analyse_subsample` function for
 #'   each seed in `list.of.seeds`.
@@ -25,11 +25,11 @@
 #' @importFrom foreach %dopar%
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #'
-sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved, chunk_size = NULL) {
+sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved, JobSize = NULL) {
 
   # Set default chunk size if not provided
-  if (is.null(chunk_size)) {
-    chunk_size <- min(50, max(1, ceiling(length(list.of.seeds) / max(1, nProc))))
+  if (is.null(JobSize)) {
+    JobSize <- min(50, max(1, ceiling(length(list.of.seeds) / max(1, nProc))))
   }
 
   # Identify relevant variables according to PCA projection, if selected
@@ -108,7 +108,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   }
 
   # Split seeds into chunks
-  seed_chunks <- split(list.of.seeds, ceiling(seq_along(list.of.seeds) / chunk_size))
+  seed_chunks <- split(list.of.seeds, ceiling(seq_along(list.of.seeds) / JobSize))
 
   # Initialize result list
   ReducedDataMat <- vector("list", length(list.of.seeds))

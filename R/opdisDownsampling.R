@@ -17,7 +17,7 @@
 #'   relevant variables.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part 
 #'   of the data for distribution equality with the original.
-#' @param chunk_size Number of seeds to process in each chunk for memory optimization.
+#' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
 #'
@@ -36,7 +36,7 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, chunk_size = NULL, verbose = FALSE) {
+                              CheckRemoved = FALSE, JobSize = NULL, verbose = FALSE) {
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
 
@@ -83,8 +83,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   nProc <- determine_n_cores(MaxCores)
 
   # Determine optimal chunk size if not provided
-  if (is.null(chunk_size)) {
-    chunk_size <- calculate_optimal_chunk_size(
+  if (is.null(JobSize)) {
+    JobSize <- calculate_optimal_JobSize(
       n_rows = nrow(dfx),
       n_cols = ncol(dfx) - 1,  # Exclude class column
       nTrials = nTrials,
@@ -92,7 +92,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     )
 
     # Print diagnostics if requested
-    print_chunk_diagnostics(nrow(dfx), ncol(dfx) - 1, nTrials, chunk_size, verbose)
+    print_chunk_diagnostics(nrow(dfx), ncol(dfx) - 1, nTrials, JobSize, verbose)
   }
 
   # Perform sampling and analyze picked data subsets
@@ -103,7 +103,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     PCAimportance = PCAimportance,
                                     nProc = nProc,
                                     CheckRemoved = CheckRemoved,
-                                    chunk_size = chunk_size)
+                                    JobSize = JobSize)
 
   # Memory-efficient matrix construction
   # Pre-allocate matrices instead of using do.call(rbind, ...)

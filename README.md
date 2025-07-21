@@ -68,7 +68,7 @@ LargeDataSample <- opdisDownsampling(Data = large_dataset,
 
 # Custom chunk size for fine-tuned memory control
 CustomSample <- opdisDownsampling(Data = my_data, 
-  Size = 100, nTrials = 2000, chunk_size = 50)
+  Size = 100, nTrials = 2000, JobSize = 50)
 ```
 
 ### Arguments
@@ -84,7 +84,7 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
 | `CheckRemoved ` | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
-| `chunk_size`    | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
+| `JobSize`       | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
 | `verbose`       | Print diagnostic information about memory usage and chunking (logical)                                                                                |
 
 
@@ -134,13 +134,13 @@ Returns a list containing:
 - Consider using fewer trials initially to estimate processing time
 
 ### For Memory-Constrained Systems
-- Manually set smaller values (e.g., 10-25) `chunk_size`
+- Manually set smaller values (e.g., 10-25) `JobSize`
 - Monitor system memory usage during processing
 - Use fewer to reduce parallel memory overhead `MaxCores`
 
 ### For Small Datasets
 - The automatic chunking will use larger chunks for efficiency
-- Manual specification is usually not needed `chunk_size`
+- Manual specification is usually not needed `JobSize`
 - Higher trial counts can be used without memory concerns
 
 
