@@ -10,3 +10,5 @@ importFrom(twosamples, ad_stat, kuiper_stat, cvm_stat, wass_stat, dts_stat)
 importFrom(parallel, detectCores, mclapply)
 importFrom(doParallel, registerDoParallel, stopImplicitCluster)
 importFrom(pbmcapply, pbmclapply)
+importFrom(utils, txtProgressBar, setTxtProgressBar)
+

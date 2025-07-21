@@ -5,4 +5,27 @@
 .RData
 *.png
 *.html
+12RLibrary.Rproj
+opdisDownsampling
+opdisDownsampling_0.1.0.tar.gz
+opdisDownsampling_0.5.0.tar.gz
+opdisDownsampling_0.6.0.tar.gz
+opdisDownsampling_0.7.0.tar.gz
+opdisDownsampling_0.8.0.tar.gz
+opdisDownsampling_0.8.1.tar.gz
+opdisDownsampling_0.8.2.tar.gz
+opdisDownsampling_1.0.1.tar.gz
+opdisDownsampling_1.0.tar.gz
+opdisDownsampling_1.5.tar.gz
+opdisDownsampling_170621.tar.xz
+opdisDownsampling.code-workspace
+opdisDownsampling (Kopie)
+opdisDownsampling (Kopie 2)
+opdisDownsampling (Kopieren)
+opdisDownsampling.R
+opdisDownsamplingXX
+SmoothDensHist1dim.RwithCPP
+Test_opdisDownsampling.R
+WithCpp.tar.xz
+*.code-workspace
 

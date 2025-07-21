@@ -59,6 +59,18 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
   Size = 50, MaxCores = 1)
 ```
 
+### Memory-efficient processing for large datasets
+
+```r
+# Automatic memory optimization for large datasets
+LargeDataSample <- opdisDownsampling(Data = large_dataset, 
+  Size = 0.1, nTrials = 5000, verbose = TRUE)
+
+# Custom chunk size for fine-tuned memory control
+CustomSample <- opdisDownsampling(Data = my_data, 
+  Size = 100, nTrials = 2000, chunk_size = 50)
+```
+
 ### Arguments
 
 | Argument        | Description                                                                                                                                           |
@@ -72,6 +84,22 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 | `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
 | `CheckRemoved ` | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
+| `chunk_size`    | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
+| `verbose`       | Print diagnostic information about memory usage and chunking (logical)                                                                                |
+
+
+### Memory Optimization
+The package automatically optimizes memory usage through intelligent chunking:
+- **Automatic chunk sizing**: Considers data dimensions, available system memory, and number of processor cores
+- **Memory-constrained processing**: Prevents memory exhaustion on large datasets or high trial counts
+- **Adaptive strategy**: Uses larger chunks for small datasets (efficiency) and smaller chunks for large datasets (memory safety)
+- **Diagnostic output**: Enable `verbose = TRUE` to understand memory usage patterns
+
+**Memory optimization is particularly beneficial for:**
+- Large datasets (>100MB)
+- High trial counts (>1000 trials)
+- Memory-constrained systems
+- Datasets with many variables or observations
 
 ### Available `TestStat` options
 
@@ -98,6 +126,23 @@ Returns a list containing:
 - `RemovedInstances`: Row names of the removed data
 
 ---
+
+## Performance Tips
+### For Large Datasets
+- Use `verbose = TRUE` to monitor memory usage
+- The automatic chunking will optimize memory usage based on your system
+- Consider using fewer trials initially to estimate processing time
+
+### For Memory-Constrained Systems
+- Manually set smaller values (e.g., 10-25) `chunk_size`
+- Monitor system memory usage during processing
+- Use fewer to reduce parallel memory overhead `MaxCores`
+
+### For Small Datasets
+- The automatic chunking will use larger chunks for efficiency
+- Manual specification is usually not needed `chunk_size`
+- Higher trial counts can be used without memory concerns
+
 
 ## Documentation
 
