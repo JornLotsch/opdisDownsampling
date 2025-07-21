@@ -13,6 +13,8 @@
 #' @param PCAimportance A logical value indicating whether to use PCA to identify
 #'   relevant variables.
 #' @param nProc The number of cores to use for parallel processing.
+#' @param CheckRemoved A logical value indicating whether to also optimize the removed part 
+#'   of the data for distribution equality with the original.
 #'
 #' @return A list of the results from the `make_and_analyse_subsample` function for
 #'   each seed in `list.of.seeds`.
@@ -22,7 +24,7 @@
 #' @importFrom foreach %dopar%
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #'
-sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc) {
+sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved) {
   # Identify relevant variables according to PCA projection, if selected
   selectedVars <- names(DataAndClasses)[1:(ncol(DataAndClasses)-1)]
   if (PCAimportance && length(list.of.seeds) > 1 && ncol(DataAndClasses) > 2) {
@@ -34,8 +36,15 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   # Central sampling function
   make_and_analyse_subsample <- function(DataAndClasses, TestStat, Size, Seed) {
     df_reduced <- MakeReducedDataMat(DataAndClasses, Size, Seed)
-    ADv <- CompareReducedDataMat(DataAndClasses = DataAndClasses, ReducedDataList = df_reduced$ReducedDataList, TestStat = TestStat)
-    return(ADv[selectedVars])
+    ADv_reduced <- CompareReducedDataMat(DataAndClasses = DataAndClasses, ReducedDataList = df_reduced$ReducedDataList, TestStat = TestStat)
+    if (CheckRemoved) {
+      ADv_removed <- CompareReducedDataMat(DataAndClasses = DataAndClasses, ReducedDataList = df_reduced$RemovedDataList, TestStat = TestStat)  
+    } else 
+    {
+      ADv_removed <- ADv_reduced
+      ADv_removed[selectedVars] <- NA
+    }
+    return(list(ADv_reduced = ADv_reduced[selectedVars], ADv_removed = ADv_removed[selectedVars]) )
   }
   
   # Perform sampling and analyze picked data subsets

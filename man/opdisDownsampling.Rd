@@ -6,14 +6,16 @@
 }
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
-TestStat = "ad", MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE)
+  TestStat = "ad", MaxCores = getOption("mc.cores", 2L), 
+  PCAimportance = FALSE, CheckRemoved = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
 
  \item{Cls}{Optional vector with class labels for each instance in \code{Data}. If missing, all instances are treated as belonging to the same class.}
 
- \item{Size}{The number (integer) or proportion (0<Size<1) of instances to draw from the dataset. The reduction is class proportional and aims to preserve the variable distributions.}
+ \item{Size}{The number (integer) or proportion (0<Size<1) of instances to draw from the dataset. 
+      The reduction is class proportional and aims to preserve the variable distributions.}
 
  \item{Seed}{Integer seed used to initialize the random number generator. Useful for reproducibility.}
 
@@ -38,12 +40,16 @@ TestStat = "ad", MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE)
  \item{MaxCores}{Maximum number of CPU cores to use for parallel computing (default is value stored in \code{getOption("mc.cores")}, or 2 if missing).}
 
  \item{PCAimportance}{Logical; if \code{TRUE}, only variables deemed important by principal component analysis are used in computing similarity statistics.}
+ 
+ \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases, 
+      which can be used for data splits into training/test and validation.}
 }
 \value{
   Returns a list with the following elements:
   \item{ReducedData}{Down-sampled data set (as data frame or matrix) including only the selected instances.}
   \item{RemovedData}{Data not included in the sample.}
   \item{ReducedInstances}{Row indices (or names) of the selected instances from the original data set.}
+  \item{RemovedInstances}{Row indices (or names) of the unselected instances from the original data set.}
 }
 \references{
   Lotsch, J., Malkusch, S., Ultsch, A. (2021):\\
@@ -61,6 +67,7 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 }
 \keyword{downsampling}
 \keyword{data reduction}
+\keyword{data splits}
 \keyword{distribution preservation}
 \keyword{sampling}
 

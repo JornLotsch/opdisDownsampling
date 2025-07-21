@@ -71,6 +71,7 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 | `TestStat`      | Statistical test for distribution comparison (default: `"ad"`). Available options: `"ad"`, `"kuiper"`, `"cvm"`, `"wass"`, `"dts"`, `"ks"`, `"kld"`, `"amrdd"`, `"euc"` |
 | `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
+| `CheckRemoved ` | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
 
 ### Available `TestStat` options
 
@@ -94,6 +95,7 @@ Returns a list containing:
 - `ReducedData`: Down-sampled data frame
 - `RemovedData`: Data not included in the sample
 - `ReducedInstances`: Row names of the reduced data
+- `RemovedInstances`: Row names of the removed data
 
 ---
 

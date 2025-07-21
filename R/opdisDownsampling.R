@@ -15,6 +15,8 @@
 #' @param MaxCores The maximum number of cores to use for parallel processing.
 #' @param PCAimportance A logical value indicating whether to use PCA to identify
 #'   relevant variables.
+#' @param CheckRemoved A logical value indicating whether to also optimize the removed part 
+#'   of the data for distribution equality with the original.
 #'
 #' @return A list with the following elements:
 #'   - `ReducedData`: The downsampled dataset.
@@ -29,7 +31,7 @@
 #' @import foreach
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
-                              MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE) {
+                              MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE, CheckRemoved = FALSE) {
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
   
@@ -82,12 +84,20 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     Size = Size,
                                     list.of.seeds = list.of.seeds,
                                     PCAimportance = PCAimportance,
-                                    nProc = nProc)
+                                    nProc = nProc,
+                                    CheckRemoved = CheckRemoved)
   
   # Find best subsample
-  ADstatMat <- do.call(rbind, ReducedDiag)
-  BestTrial <- which.min(apply(ADstatMat, 1, max))
+  AD_reduced_statMat <- do.call(rbind, lapply(ReducedDiag,"[[", 1) )
+  AD_removed_statMat <- do.call(rbind, lapply(ReducedDiag,"[[", 2) )
   
+  if (!CheckRemoved) {
+    BestTrial <- which.min(apply(AD_reduced_statMat, 1, max))
+  } else {
+    AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)  
+    BestTrial <- which.min(apply(AD_all_statMat, 1, max))
+  }
+
   # Get the best subsample
   df_reduced_final <- MakeReducedDataMat(DataAndClasses = dfx, Size = Size, Seed = list.of.seeds[BestTrial])
   ReducedData <- df_reduced_final$ReducedDataList
@@ -98,5 +108,5 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     RemovedData <- RemovedData[1:(ncol(RemovedData) - 1)]
   }
   
-  return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData)))
+  return(list(ReducedData = ReducedData, RemovedData = RemovedData, ReducedInstances = rownames(ReducedData), RemovedInstances = rownames(RemovedData)))
 }
