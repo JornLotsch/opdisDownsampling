@@ -7,7 +7,7 @@
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  PCAimportance = FALSE, CheckRemoved = FALSE,
+  PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE, 
   JobSize = 0, verbose = FALSE)
 }
 \arguments{
@@ -45,8 +45,11 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases,
       which can be used for data splits into training/test and validation.}
 
+ \item{CheckThreefold}{Logical; if \code{TRUE}, the optimization also includes the equal distribution of
+      the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
+
  \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
-      If \code{NULL} (default), an optimal chunk size is automatically calculated based on data dimensions,
+      If \code{0} (default), no chunking is applied. If \code{NULL}, an optimal chunk size is automatically calculated based on data dimensions,
       number of trials, available system memory, and number of processor cores. Smaller chunk sizes use less
       memory but may increase computational overhead, while larger chunk sizes are more efficient but require
       more memory. Manual specification overrides the automatic calculation.}

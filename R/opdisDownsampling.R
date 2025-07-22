@@ -18,6 +18,8 @@
 #'   relevant variables.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part 
 #'   of the data for distribution equality with the original.
+#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
+#'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
@@ -37,7 +39,7 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, JobSize = 0, verbose = FALSE) {
+                              CheckRemoved = FALSE, CheckThreefold = FALSE, JobSize = 0, verbose = FALSE) {
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
 
@@ -132,6 +134,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     PCAimportance = PCAimportance,
                                     nProc = nProc,
                                     CheckRemoved = CheckRemoved,
+                                    CheckThreefold = CheckThreefold,
                                     JobSize = JobSize)
 
   # Memory-efficient matrix construction
@@ -146,12 +149,15 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                  dimnames = list(NULL, var_names))
     AD_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
                                  dimnames = list(NULL, var_names))
-
+    AD_reduced_vs_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
+                                 dimnames = list(NULL, var_names))
+    
     # Fill matrices efficiently
     for (i in seq_len(n_trials)) {
       if (!is.null(ReducedDiag[[i]])) {
         AD_reduced_statMat[i, ] <- ReducedDiag[[i]][[1]]
         AD_removed_statMat[i, ] <- ReducedDiag[[i]][[2]]
+        AD_reduced_vs_removed_statMat[i, ] <- ReducedDiag[[i]][[3]]
       }
     }
 
@@ -167,9 +173,15 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   if (!CheckRemoved) {
     BestTrial <- which.min(apply(AD_reduced_statMat, 1, max, na.rm = TRUE))
   } else {
-    AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)
-    BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
-    rm(AD_all_statMat)  # Clean up immediately
+    if (!CheckThreefold) {
+      AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)
+      BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
+      rm(AD_all_statMat)  # Clean up immediately
+    } else {
+      AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+      BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
+      rm(AD_all_statMat)  # Clean up immediately
+    }
   }
 
   # Clean up stat matrices

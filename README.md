@@ -83,7 +83,8 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `TestStat`      | Statistical test for distribution comparison (default: `"ad"`). Available options: `"ad"`, `"kuiper"`, `"cvm"`, `"wass"`, `"dts"`, `"ks"`, `"kld"`, `"amrdd"`, `"euc"` |
 | `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
-| `CheckRemoved ` | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
+| `CheckRemoved`  | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
+| `CheckThreefold`| Also also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical)         |
 | `JobSize`       | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
 | `verbose`       | Print diagnostic information about memory usage and chunking (logical)                                                                                |
 

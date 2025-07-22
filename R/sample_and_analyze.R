@@ -15,6 +15,8 @@
 #' @param nProc The number of cores to use for parallel processing.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part
 #'   of the data for distribution equality with the original.
+#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
+#'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
 #' @param JobSize Number of seeds to process in each chunk (default: min(50, length(list.of.seeds)/nProc))
 #'
 #' @return A list of the results from the `make_and_analyse_subsample` function for
@@ -25,7 +27,7 @@
 #' @importFrom foreach %dopar%
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #'
-sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved, JobSize = NULL) {
+sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved, CheckThreefold, JobSize = NULL) {
 
   # Set default chunk size if not provided
   if (is.null(JobSize)) {
@@ -51,7 +53,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   DataSubset <- DataAndClasses[, c(selectedVars, names(DataAndClasses)[ncol(DataAndClasses)]), drop = FALSE]
 
   # Memory-optimized sampling function
-  make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved) {
+  make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved, CheckThreefold) {
     df_reduced <- MakeReducedDataMat(DataSubset, Size, Seed)
     ADv_reduced <- CompareReducedDataMat(DataAndClasses = DataSubset,
                                          ReducedDataList = df_reduced$ReducedDataList,
@@ -66,15 +68,26 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       names(ADv_removed) <- selectedVars
     }
 
+    if (CheckThreefold) {
+      ADv_reduced_vs_removed <- CompareReducedDataMat(DataAndClasses = df_reduced$ReducedDataList,
+                                           ReducedDataList = df_reduced$RemovedDataList,
+                                           TestStat = TestStat)
+    } else {
+      ADv_reduced_vs_removed <- rep(NA_real_, length(selectedVars))
+      names(ADv_reduced_vs_removed) <- selectedVars
+    }
+    
+    
     # Clean up intermediate objects
     rm(df_reduced)
 
     return(list(ADv_reduced = ADv_reduced[selectedVars],
-                ADv_removed = ADv_removed[selectedVars]))
+                ADv_removed = ADv_removed[selectedVars],
+                ADv_reduced_vs_removed = ADv_reduced_vs_removed[selectedVars]))
   }
 
   # Process in chunks to reduce memory pressure
-  process_chunk <- function(seed_chunk, DataSubset, TestStat, Size, selectedVars, CheckRemoved, use_parallel = FALSE, cores = 1) {
+  process_chunk <- function(seed_chunk, DataSubset, TestStat, Size, selectedVars, CheckRemoved, CheckThreefold, use_parallel = FALSE, cores = 1) {
     if (use_parallel && cores > 1 && length(seed_chunk) > 1) {
       if (Sys.info()[["sysname"]] == "Windows") {
         # Use foreach for Windows
@@ -85,14 +98,14 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
                                    .maxcombine = length(seed_chunk),
                                    .multicombine = TRUE,
                                    .packages = c()) %dopar% {
-          list(make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved))
+          list(make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold))
         }
         doParallel::stopImplicitCluster()
       } else {
         # Use mclapply for Unix-like systems
         result <- pbmcapply::pbmclapply(
           seed_chunk,
-          function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved),
+          function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold),
           mc.cores = min(cores, length(seed_chunk)),
           mc.preschedule = TRUE  # Better load balancing
         )
@@ -101,7 +114,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       # Sequential processing
       result <- lapply_with_bar(
         seed_chunk,
-        function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved)
+        function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold)
       )
     }
     return(result)
@@ -123,6 +136,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       Size = Size,
       selectedVars = selectedVars,
       CheckRemoved = CheckRemoved,
+      CheckThreefold = CheckThreefold,
       use_parallel = nProc > 1,
       cores = nProc
     )
