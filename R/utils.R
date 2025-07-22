@@ -56,3 +56,35 @@ lapply_with_bar <- function(X, FUN, ...) {
   result
 }
 
+#' @title Find maximum value ignoring NaN/NA values
+#' @description Finds the maximum value in data while ignoring NaN and NA values.
+#' For matrices, returns column-wise maxima. For vectors, returns the overall maximum.
+#' @param Data Numeric vector or matrix. Input data to find maximum values from.
+#' @return Numeric. For vectors: single maximum value. For matrices: vector of
+#' column-wise maximum values.
+#' @details This function handles both vector and matrix inputs. For matrices,
+#' it applies the maximum function column-wise using \code{apply} with
+#' \code{na.rm = TRUE}. For vectors, it returns the single maximum value.
+#' @keywords internal
+#' @examples
+#' \dontrun{
+#' # Vector example
+#' vec <- c(1, 2, NA, 4, NaN, 3)
+#' nanmax(vec)  # Returns 4
+#'
+#' # Matrix example
+#' mat <- matrix(c(1, NA, 3, 2, NaN, 4), nrow = 2)
+#' nanmax(mat)  # Returns column maxima
+#' }
+nanmax <- function(Data) {
+  if (length(dim(Data)) == 2) {
+    # Matrix case: return column-wise maxima
+    SpaltenMinima <- apply(Data, 2, function(x) max(x, na.rm = TRUE))
+    SpaltenInd <- NaN
+  } else {
+    # Vector case: return overall maximum
+    SpaltenMinima <- max(Data, na.rm = TRUE)
+    SpaltenInd <- which(Data == SpaltenMinima)
+  }
+  return(SpaltenMinima)
+}
