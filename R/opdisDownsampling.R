@@ -40,6 +40,11 @@
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
                               CheckRemoved = FALSE, CheckThreefold = FALSE, JobSize = 0, verbose = FALSE) {
+
+  # Set CheckThreefold to FALSE when CheckRemoved is FALSE
+  if (!CheckRemoved) CheckThreefold <- FALSE
+  
+  # Create empty data frame
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
 
