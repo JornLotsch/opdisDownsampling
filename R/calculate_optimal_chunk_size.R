@@ -20,11 +20,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' JobSize <- calculate_optimal_JobSize(1000, 50, 500, 4)
+#' JobSize <- calculate_optimal_chunk_size(1000, 50, 500, 4)
 #' }
 #'
 #' @export
-calculate_optimal_JobSize <- function(n_rows, n_cols, nTrials, nProc) {
+calculate_optimal_chunk_size <- function(n_rows, n_cols, nTrials, nProc) {
   # Calculate data characteristics
   data_size_mb <- (n_rows * n_cols * 8) / (1024^2)  # Approximate size in MB (8 bytes per double)
 

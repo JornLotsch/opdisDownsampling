@@ -6,8 +6,9 @@
 #' @param Data A data frame containing the data to be downsampled.
 #' @param Cls A vector of class labels for the data. If not provided, all instances
 #'   will be assigned to a single class.
-#' @param Size A numeric value between 0 and 1 representing the desired size of the
-#'   downsampled dataset as a proportion of the original dataset.
+#' @param Size A numeric value specifying the desired size of the downsampled dataset.
+#'   If 0 < Size < 1, it is treated as a proportion of the original dataset.
+#'   If Size >= 1, it is treated as the absolute number of instances to retain.#'
 #' @param Seed An integer value to be used as the random seed for reproducibility.
 #' @param nTrials The number of trials to perform when sampling the data.
 #' @param TestStat A character string specifying the statistical test to be used for
@@ -36,7 +37,7 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, JobSize = NULL, verbose = FALSE) {
+                              CheckRemoved = FALSE, JobSize = 0, verbose = FALSE) {
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
 
@@ -56,14 +57,28 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   }
   dfx$Cls <- Cls
 
-  # Handle size parameter
+  # Handle size parameter: convert proportion to absolute count if needed
+  original_size <- Size  # Keep original for potential error messages
+  if (Size > 0 && Size < 1) {
+    # Convert proportion to absolute count
+    Size <- round(Size * nrow(dfx))
+    if (verbose) {
+      message(sprintf("Size converted from proportion %.3f to absolute count: %d", original_size, Size))
+    }
+  } else if (Size >= 1) {
+    # Use as absolute count (ensure it's integer)
+    Size <- as.integer(Size)
+  }
+
+  # Validate the final size
   if (Size >= nrow(dfx)) {
-    warning("opdisDownsampling: Size >= length of 'Data'. Nothing to downsample.", call. = FALSE)
+    warning(sprintf("opdisDownsampling: Size (%d) >= number of rows (%d). Nothing to downsample.",
+                    Size, nrow(dfx)), call. = FALSE)
     return(list(ReducedData = dfx, RemovedData = dfxempty, ReducedInstances = rownames(dfx)))
   }
 
   if (Size <= 0) {
-    warning("opdisDownsampling: Size <= 0. All data will be removed.", call. = FALSE)
+    warning(sprintf("opdisDownsampling: Size (%d) <= 0. All data will be removed.", Size), call. = FALSE)
     return(list(ReducedData = dfxempty, RemovedData = dfx, ReducedInstances = rownames(dfxempty)))
   }
 
@@ -82,14 +97,28 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   list.of.seeds <- 1:nTrials + Seed - 1
   nProc <- determine_n_cores(MaxCores)
 
-  # Determine optimal chunk size if not provided
-  if (is.null(JobSize)) {
-    JobSize <- calculate_optimal_JobSize(
-      n_rows = nrow(dfx),
-      n_cols = ncol(dfx) - 1,  # Exclude class column
-      nTrials = nTrials,
-      nProc = nProc
-    )
+  # Determine optimal chunk size if not provided or handle no-chunking request
+  if (JobSize <= 0) {  # 0 or negative means no chunking
+    JobSize <- nTrials  # Process everything in one chunk
+
+    # Still print diagnostics if requested, but indicate no chunking
+    if (verbose) {
+      data_size_mb <- (nrow(dfx) * (ncol(dfx) - 1) * 8) / (1024^2)
+      message(sprintf("Chunk size diagnostics:"))
+      message(sprintf("  Data: %d rows x %d cols (%.1f MB)", nrow(dfx), ncol(dfx) - 1, data_size_mb))
+      message(sprintf("  Trials: %d, Chunk size: %d (no chunking - single batch)",
+                      nTrials, JobSize))
+    }
+  } else {
+    # Use the provided JobSize or calculate optimal size
+    if (is.null(JobSize)) {  # This condition won't be hit with the new default, but kept for clarity
+      JobSize <- calculate_optimal_chunk_size(
+        n_rows = nrow(dfx),
+        n_cols = ncol(dfx) - 1,
+        nTrials = nTrials,
+        nProc = nProc
+      )
+    }
 
     # Print diagnostics if requested
     print_chunk_diagnostics(nrow(dfx), ncol(dfx) - 1, nTrials, JobSize, verbose)

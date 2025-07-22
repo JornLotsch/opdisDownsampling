@@ -8,7 +8,7 @@
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
   PCAimportance = FALSE, CheckRemoved = FALSE,
-  JobSize = NULL, verbose = FALSE)
+  JobSize = 0, verbose = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
