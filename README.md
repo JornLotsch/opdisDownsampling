@@ -176,3 +176,9 @@ Lötsch J, Malkusch S, Ultsch A. Optimal distribution-preserving downsampling of
 
 - [CRAN package page](https://cran.r-project.org/package=opdisDownsampling)
 - [Original publication (PLoS ONE)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838)
+
+## Experiments
+
+This repository also contains an `experiments` directory with additional research code and analyses. These experiments are **not part of the R library** but contain computational experiments and analyses conducted for research papers in preparation. The experimental code demonstrates various applications of the downsampling methods and includes comparative studies and validation analyses.
+
+**Note:** The experiments directory is separate from the main R package and is intended for research and development purposes.
