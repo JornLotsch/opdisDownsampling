@@ -12,4 +12,5 @@
 ^plots/
 .*\.html$
 .*\.code-workspace$
+^experiments
 

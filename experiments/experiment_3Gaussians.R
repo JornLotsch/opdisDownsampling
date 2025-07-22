@@ -1,0 +1,215 @@
+#' Downsampling Analysis Function
+#'
+#' Performs downsampling analysis on provided data, generates plots,
+#' and computes distribution comparison statistics.
+#'
+#' @param data_df Data frame with 'Data' and 'Cls' columns
+#' @param nSamples Number of downsampling iterations
+#' @param Size Target size for downsampled data
+#' @param nTrials Number of trials for opdisDownsampling
+#' @param CheckRemoved Logical; if TRUE, also optimize the removed part of the data for distribution equality with the original
+#' @param CheckThreefold Logical; if TRUE, also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE
+#' @param path_functions Path to custom distribution comparison functions
+#' @return List containing plots and statistical comparison results
+downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1,
+                                CheckRemoved = FALSE, CheckThreefold = FALSE,
+                                path_functions = "/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/R/") {
+
+  # Load required libraries
+  library(ggplot2)
+  library(ggthemes)
+  library(reshape2)
+  library(ggbeeswarm)
+
+  # Source custom functions for distribution comparison
+  source(paste0(path_functions, "amrdd.R"))
+  source(paste0(path_functions, "CompDistrib.R"))
+  source(paste0(path_functions, "EucDist.R"))
+  source(paste0(path_functions, "KullbLeiblKLD2.R"))
+  source(paste0(path_functions, "SmoothDensHist1dim.R"))
+  source(paste0(path_functions, "utils.R"))
+  source("/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/experiments/ParetoDensityEstimationIE2.R")
+
+  # Perform downsampling iterations
+  downsampled_results <- lapply(1:nSamples, function(i) {
+    result <- opdisDownsampling::opdisDownsampling(
+      Data = data_df$Data,
+      Cls = data_df$Cls,
+      Size = Size,
+      Seed = i + (i - 1) * 1000000,
+      nTrials = nTrials,
+      CheckRemoved = CheckRemoved,
+      CheckThreefold = CheckThreefold,
+      MaxCores = 1
+    )
+
+    list(
+      reduced_data = result$ReducedData$Data,
+      removed_data = result$RemovedData$Data
+    )
+  })
+
+  # Extract and organize downsampled data
+  reduced_data_df <- do.call(cbind.data.frame, lapply(downsampled_results, "[[", "reduced_data"))
+  removed_data_df <- do.call(cbind.data.frame, lapply(downsampled_results, "[[", "removed_data"))
+  names(reduced_data_df) <- paste0("Sample_", 1:nSamples)
+  names(removed_data_df) <- paste0("Sample_", 1:nSamples)
+
+  # Helper function for PDE calculation
+  calculate_pde <- function(data, pareto_radius = 0.05) {
+    pde_result <- ParetoDensityEstimationIE(
+      Data = data,
+      paretoRadius = pareto_radius,
+      kernels = seq(min(data_df$Data), max(data_df$Data), by = 0.001)
+    )
+    data.frame(x = pde_result$kernels, y = pde_result$paretoDensity)
+  }
+
+  # Calculate PDEs for original and downsampled data
+  original_pde <- calculate_pde(data_df$Data)
+
+  reduced_pdes <- apply(reduced_data_df, 2, calculate_pde)
+  reduced_pdes <- mapply(function(df, name) {
+    df$name <- name
+    df
+  }, reduced_pdes, names(reduced_pdes), SIMPLIFY = FALSE)
+
+  removed_pdes <- apply(removed_data_df, 2, calculate_pde)
+  removed_pdes <- mapply(function(df, name) {
+    df$name <- name
+    df
+  }, removed_pdes, names(removed_pdes), SIMPLIFY = FALSE)
+
+  # Prepare data for plotting
+  reduced_plot_data <- rbind.data.frame(
+    cbind.data.frame(original_pde, name = "Original", Category = "Original"),
+    cbind.data.frame(do.call(rbind.data.frame, reduced_pdes), Category = "Samples")
+  )
+
+  removed_plot_data <- rbind.data.frame(
+    cbind.data.frame(original_pde, name = "Original", Category = "Original"),
+    cbind.data.frame(do.call(rbind.data.frame, removed_pdes), Category = "Samples")
+  )
+
+  # Create plots
+  plot_theme <- theme_light() +
+    theme(
+      legend.position.inside = TRUE,
+      legend.position = c(0.1, 0.8),
+      legend.background = element_rect(fill = alpha("white", 0.5)),
+      strip.background = element_rect(fill = "cornsilk"),
+      strip.text = element_text(colour = "black")
+    )
+
+  p_reduced <- ggplot(reduced_plot_data, aes(x = x, y = y, color = Category, group = name)) +
+    geom_line() +
+    scale_color_colorblind() +
+    plot_theme +
+    labs(x = "Data", y = "PDE", title = "Reduced data: PDE comparison")
+
+  p_removed <- ggplot(removed_plot_data, aes(x = x, y = y, color = Category, group = name)) +
+    geom_line() +
+    scale_color_colorblind() +
+    plot_theme +
+    labs(x = "Data", y = "PDE", title = "Removed data: PDE comparison")
+
+  # Statistical comparison
+  test_statistics <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "amrdd", "euc")
+
+  statistical_results <- lapply(test_statistics, function(test_stat) {
+    reduced_vs_orig <- apply(reduced_data_df, 2, function(x) {
+      CompDistrib(vector1 = x, vector2 = data_df$Data, TestStat = test_stat)
+    })
+
+    removed_vs_orig <- apply(removed_data_df, 2, function(x) {
+      CompDistrib(vector1 = x, vector2 = data_df$Data, TestStat = test_stat)
+    })
+
+    reduced_vs_removed <- mapply(CompDistrib, reduced_data_df, removed_data_df,
+                                 MoreArgs = list(TestStat = test_stat))
+
+    list(
+      reduced_vs_orig = reduced_vs_orig,
+      removed_vs_orig = removed_vs_orig,
+      reduced_vs_removed = reduced_vs_removed
+    )
+  })
+  names(statistical_results) <- test_statistics
+
+  # Organize statistical results for plotting
+  stats_df <- rbind.data.frame(
+    cbind.data.frame(
+      Comparison = "Reduced vs Original",
+      Test = rownames(do.call(rbind, lapply(statistical_results, "[[", "reduced_vs_orig"))),
+      do.call(rbind, lapply(statistical_results, "[[", "reduced_vs_orig"))
+    ),
+    cbind.data.frame(
+      Comparison = "Removed vs Original",
+      Test = rownames(do.call(rbind, lapply(statistical_results, "[[", "removed_vs_orig"))),
+      do.call(rbind, lapply(statistical_results, "[[", "removed_vs_orig"))
+    ),
+    cbind.data.frame(
+      Comparison = "Reduced vs Removed",
+      Test = rownames(do.call(rbind, lapply(statistical_results, "[[", "reduced_vs_removed"))),
+      do.call(rbind, lapply(statistical_results, "[[", "reduced_vs_removed"))
+    )
+  )
+
+  stats_long <- melt(stats_df)
+
+  p_statistics <- ggplot(stats_long, aes(x = Comparison, y = value, color = Comparison)) +
+    geom_beeswarm(method = "compactswarm", show.legend = FALSE) +
+    facet_wrap(~ Test, scales = "free", nrow = 1) +
+    theme_light() +
+    theme(
+      legend.position = "bottom",
+      legend.background = element_rect(fill = alpha("white", 0.5)),
+      strip.background = element_rect(fill = "cornsilk"),
+      strip.text = element_text(colour = "black"),
+      axis.text.x = element_text(angle = 90, hjust = 1)
+    ) +
+    scale_color_colorblind() +
+    labs(y = "Test Statistic Value", title = "Distribution comparison statistics")
+
+  # Return results
+  return(list(
+    plots = list(
+      reduced_data_plot = p_reduced,
+      removed_data_plot = p_removed,
+      statistics_plot = p_statistics
+    ),
+    data = list(
+      original_data = data_df,
+      reduced_data = reduced_data_df,
+      removed_data = removed_data_df,
+      statistical_results = statistical_results
+    )
+  ))
+}
+
+# Generate synthetic 3-component GMM data (outside the function)
+generate_gmm_data <- function() {
+  N <- 3000
+  weights <- c(.6, .1, .3)
+  sds <- c(2, .001, .2)
+  means <- c(0, 4, 6)
+
+  set.seed(42)
+  gmm_params <- rbind(weights * N, means, sds)
+  gmm_params_list <- split(gmm_params, rep(1:ncol(gmm_params), each = nrow(gmm_params)))
+
+  data_vector <- unlist(lapply(gmm_params_list, function(x) {
+    do.call(rnorm, as.list(x))
+  }))
+
+  class_vector <- rep(1:3, weights * N)
+  data.frame(Cls = class_vector, Data = data_vector)
+}
+
+# Experiment:
+df_art_data_3GMM <- generate_gmm_data()
+results <- downsample_analysis(df_art_data_3GMM, nSamples = 10, Size = 1500, nTrials = 1,
+                               CheckRemoved = FALSE, CheckThreefold = FALSE)
+print(results$plots$reduced_data_plot)
+print(results$plots$removed_data_plot)
+print(results$plots$statistics_plot)
