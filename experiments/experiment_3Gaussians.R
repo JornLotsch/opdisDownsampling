@@ -118,7 +118,7 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
     labs(x = "Data", y = "PDE", title = "Removed data: PDE comparison")
 
   # Statistical comparison
-  test_statistics <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "amrdd", "euc")
+  test_statistics <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "amrdd", "euc", "kld")
 
   statistical_results <- lapply(test_statistics, function(test_stat) {
     reduced_vs_orig <- apply(reduced_data_df, 2, function(x) {
