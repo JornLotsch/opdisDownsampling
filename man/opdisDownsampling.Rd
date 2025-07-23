@@ -8,7 +8,7 @@
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
   PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE, 
-  JobSize = 0, verbose = FALSE)
+  OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
@@ -47,6 +47,9 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
 
  \item{CheckThreefold}{Logical; if \code{TRUE}, the optimization also includes the equal distribution of
       the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
+
+ \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation. 
+      If set, all other comparisions are not performed.}
 
  \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
       If \code{0} (default), no chunking is applied. If \code{NULL}, an optimal chunk size is automatically calculated based on data dimensions,

@@ -20,6 +20,8 @@
 #'   of the data for distribution equality with the original.
 #' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
 #'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
+#' @param OptimizeBetween A logical value indicating whether to optimize the reduced part 
+#'   of the data for distribution equality with the removed part. If set, all other comparisions are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
@@ -39,14 +41,21 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, CheckThreefold = FALSE, JobSize = 0, verbose = FALSE) {
+                              CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
+                              JobSize = 0, verbose = FALSE) {
 
   # Set CheckThreefold to FALSE when CheckRemoved is FALSE
   if (!CheckRemoved) CheckThreefold <- FALSE
-  
+
+  # Set CheckThreefold and CheckRemoved to FALSE when OptimizeBetween is TRUE
+  if (OptimizeBetween) {
+    CheckRemoved <- FALSE
+    CheckThreefold <- FALSE
+  }
+
   # Create empty data frame
   dfx <- data.frame(Data)
-  dfxempty <- dfx[0, ]
+  dfxempty <- dfx[0,]
 
   # Check if correct input is provided and library can be run
   if (!is.numeric(as.matrix(na.omit(dfx)))) {
@@ -65,7 +74,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   dfx$Cls <- Cls
 
   # Handle size parameter: convert proportion to absolute count if needed
-  original_size <- Size  # Keep original for potential error messages
+  original_size <- Size # Keep original for potential error messages
   if (Size > 0 && Size < 1) {
     # Convert proportion to absolute count
     Size <- round(Size * nrow(dfx))
@@ -105,12 +114,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   nProc <- determine_n_cores(MaxCores)
 
   # Determine optimal chunk size if not provided or handle no-chunking request
-  if (JobSize <= 0) {  # 0 or negative means no chunking
-    JobSize <- nTrials  # Process everything in one chunk
+  if (JobSize <= 0) {
+    # 0 or negative means no chunking
+    JobSize <- nTrials # Process everything in one chunk
 
     # Still print diagnostics if requested, but indicate no chunking
     if (verbose) {
-      data_size_mb <- (nrow(dfx) * (ncol(dfx) - 1) * 8) / (1024^2)
+      data_size_mb <- (nrow(dfx) * (ncol(dfx) - 1) * 8) / (1024 ^ 2)
       message(sprintf("Chunk size diagnostics:"))
       message(sprintf("  Data: %d rows x %d cols (%.1f MB)", nrow(dfx), ncol(dfx) - 1, data_size_mb))
       message(sprintf("  Trials: %d, Chunk size: %d (no chunking - single batch)",
@@ -118,7 +128,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     }
   } else {
     # Use the provided JobSize or calculate optimal size
-    if (is.null(JobSize)) {  # This condition won't be hit with the new default, but kept for clarity
+    if (is.null(JobSize)) {
+      # This condition won't be hit with the new default, but kept for clarity
       JobSize <- calculate_optimal_chunk_size(
         n_rows = nrow(dfx),
         n_cols = ncol(dfx) - 1,
@@ -140,6 +151,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     nProc = nProc,
                                     CheckRemoved = CheckRemoved,
                                     CheckThreefold = CheckThreefold,
+                                    OptimizeBetween = OptimizeBetween,
                                     JobSize = JobSize)
 
   # Memory-efficient matrix construction
@@ -156,13 +168,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                  dimnames = list(NULL, var_names))
     AD_reduced_vs_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
                                  dimnames = list(NULL, var_names))
-    
+
     # Fill matrices efficiently
     for (i in seq_len(n_trials)) {
       if (!is.null(ReducedDiag[[i]])) {
-        AD_reduced_statMat[i, ] <- ReducedDiag[[i]][[1]]
-        AD_removed_statMat[i, ] <- ReducedDiag[[i]][[2]]
-        AD_reduced_vs_removed_statMat[i, ] <- ReducedDiag[[i]][[3]]
+        AD_reduced_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced"]]
+        AD_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_removed"]]
+        AD_reduced_vs_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced_vs_removed"]]
       }
     }
 
@@ -175,20 +187,23 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   }
 
   # Find best subsample
-  if (!CheckRemoved) {
+  if (!CheckRemoved && !OptimizeBetween) {
     BestTrial <- which.min(apply(AD_reduced_statMat, 1, max, na.rm = TRUE))
   } else {
-    if (!CheckThreefold) {
-      AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)
-      BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
-      rm(AD_all_statMat)  # Clean up immediately
+    if (OptimizeBetween) {
+      BestTrial <- which.min(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE))
     } else {
-      AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
-      BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
-      rm(AD_all_statMat)  # Clean up immediately
+      if (!CheckThreefold) {
+        AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)
+        BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
+        rm(AD_all_statMat) # Clean up immediately
+      } else {
+        AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+        BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
+        rm(AD_all_statMat) # Clean up immediately
+      }
     }
   }
-
   # Clean up stat matrices
   rm(AD_reduced_statMat, AD_removed_statMat)
   gc()

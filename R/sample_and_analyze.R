@@ -17,6 +17,8 @@
 #'   of the data for distribution equality with the original.
 #' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
 #'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
+#' @param OptimizeBetween A logical value indicating whether to optimize the reduced part 
+#'   of the data for distribution equality with the removed part. If set, all other comparisions are not performed.
 #' @param JobSize Number of seeds to process in each chunk (default: min(50, length(list.of.seeds)/nProc))
 #'
 #' @return A list of the results from the `make_and_analyse_subsample` function for
@@ -27,7 +29,8 @@
 #' @importFrom foreach %dopar%
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #'
-sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc, CheckRemoved, CheckThreefold, JobSize = NULL) {
+sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc,
+                               CheckRemoved, CheckThreefold, OptimizeBetween, JobSize = NULL) {
 
   # Set default chunk size if not provided
   if (is.null(JobSize)) {
@@ -35,31 +38,31 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   }
 
   # Identify relevant variables according to PCA projection, if selected
-  selectedVars <- names(DataAndClasses)[1:(ncol(DataAndClasses)-1)]
+  selectedVars <- names(DataAndClasses)[1:(ncol(DataAndClasses) - 1)]
   if (PCAimportance && length(list.of.seeds) > 1 && ncol(DataAndClasses) > 2) {
     # Use less memory-intensive PCA options
-    pca1 <- prcomp(DataAndClasses[1:(ncol(DataAndClasses)-1)],
-                   retx = FALSE,  # Don't store transformed data
+    pca1 <- prcomp(DataAndClasses[1:(ncol(DataAndClasses) - 1)],
+                   retx = FALSE, # Don't store transformed data
                    center = TRUE,
                    scale = TRUE,
-                   rank. = min(10, ncol(DataAndClasses)-1))  # Limit components
+                   rank. = min(10, ncol(DataAndClasses) - 1)) # Limit components
     selectedVars_pca <- names(DataAndClasses)[which(names(DataAndClasses) %in% relevant_PCAvariables(pca1))]
     if (length(selectedVars_pca) > 0) selectedVars <- selectedVars_pca
-    rm(pca1)  # Clean up PCA object
-    gc()      # Force garbage collection
+    rm(pca1) # Clean up PCA object
+    gc() # Force garbage collection
   }
 
   # Pre-compute data subset for selected variables only
   DataSubset <- DataAndClasses[, c(selectedVars, names(DataAndClasses)[ncol(DataAndClasses)]), drop = FALSE]
 
   # Memory-optimized sampling function
-  make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved, CheckThreefold) {
+  make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween) {
     df_reduced <- MakeReducedDataMat(DataSubset, Size, Seed)
     ADv_reduced <- CompareReducedDataMat(DataAndClasses = DataSubset,
                                          ReducedDataList = df_reduced$ReducedDataList,
                                          TestStat = TestStat)
 
-    if (CheckRemoved) {
+    if (CheckRemoved || OptimizeBetween) {
       ADv_removed <- CompareReducedDataMat(DataAndClasses = DataSubset,
                                            ReducedDataList = df_reduced$RemovedDataList,
                                            TestStat = TestStat)
@@ -68,7 +71,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       names(ADv_removed) <- selectedVars
     }
 
-    if (CheckThreefold) {
+    if (CheckThreefold || OptimizeBetween) {
       ADv_reduced_vs_removed <- CompareReducedDataMat(DataAndClasses = df_reduced$ReducedDataList,
                                            ReducedDataList = df_reduced$RemovedDataList,
                                            TestStat = TestStat)
@@ -76,8 +79,8 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       ADv_reduced_vs_removed <- rep(NA_real_, length(selectedVars))
       names(ADv_reduced_vs_removed) <- selectedVars
     }
-    
-    
+
+
     # Clean up intermediate objects
     rm(df_reduced)
 
@@ -87,7 +90,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   }
 
   # Process in chunks to reduce memory pressure
-  process_chunk <- function(seed_chunk, DataSubset, TestStat, Size, selectedVars, CheckRemoved, CheckThreefold, use_parallel = FALSE, cores = 1) {
+  process_chunk <- function(seed_chunk, DataSubset, TestStat, Size, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween, use_parallel = FALSE, cores = 1) {
     if (use_parallel && cores > 1 && length(seed_chunk) > 1) {
       if (Sys.info()[["sysname"]] == "Windows") {
         # Use foreach for Windows
@@ -98,23 +101,23 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
                                    .maxcombine = length(seed_chunk),
                                    .multicombine = TRUE,
                                    .packages = c()) %dopar% {
-          list(make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold))
+          list(make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween))
         }
         doParallel::stopImplicitCluster()
       } else {
         # Use mclapply for Unix-like systems
         result <- pbmcapply::pbmclapply(
           seed_chunk,
-          function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold),
+          function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween),
           mc.cores = min(cores, length(seed_chunk)),
-          mc.preschedule = TRUE  # Better load balancing
+          mc.preschedule = TRUE # Better load balancing
         )
       }
     } else {
       # Sequential processing
       result <- lapply_with_bar(
         seed_chunk,
-        function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold)
+        function(seed) make_and_analyse_subsample(DataSubset, TestStat, Size, seed, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween)
       )
     }
     return(result)
@@ -137,6 +140,7 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
       selectedVars = selectedVars,
       CheckRemoved = CheckRemoved,
       CheckThreefold = CheckThreefold,
+      OptimizeBetween = OptimizeBetween,
       use_parallel = nProc > 1,
       cores = nProc
     )

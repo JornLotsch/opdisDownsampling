@@ -28,4 +28,4 @@ SmoothDensHist1dim.RwithCPP
 Test_opdisDownsampling.R
 WithCpp.tar.xz
 *.code-workspace
-
+p_experiment_3Gaussians_results.svg

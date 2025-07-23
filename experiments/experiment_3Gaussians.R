@@ -12,23 +12,26 @@
 #' @param path_functions Path to custom distribution comparison functions
 #' @return List containing plots and statistical comparison results
 downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1,
-                                CheckRemoved = FALSE, CheckThreefold = FALSE,
-                                path_functions = "/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/R/") {
+                                CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
+                                use_y_limits = FALSE, ylimits_list = NULL, MaxCores = getOption("mc.cores", 2L),
+                                path_functions = "/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/") {
 
   # Load required libraries
   library(ggplot2)
   library(ggthemes)
   library(reshape2)
   library(ggbeeswarm)
+  library(ggh4x)
+  library(cowplot)
 
   # Source custom functions for distribution comparison
-  source(paste0(path_functions, "amrdd.R"))
-  source(paste0(path_functions, "CompDistrib.R"))
-  source(paste0(path_functions, "EucDist.R"))
-  source(paste0(path_functions, "KullbLeiblKLD2.R"))
-  source(paste0(path_functions, "SmoothDensHist1dim.R"))
-  source(paste0(path_functions, "utils.R"))
-  source("/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/experiments/ParetoDensityEstimationIE2.R")
+  source(paste0(path_functions, "R/", "amrdd.R"))
+  source(paste0(path_functions, "R/", "CompDistrib.R"))
+  source(paste0(path_functions, "R/", "EucDist.R"))
+  source(paste0(path_functions, "R/", "KullbLeiblKLD2.R"))
+  source(paste0(path_functions, "R/", "SmoothDensHist1dim.R"))
+  source(paste0(path_functions, "R/", "utils.R"))
+  source(paste0(path_functions, "experiments/", "ParetoDensityEstimationIE2.R"))
 
   # Perform downsampling iterations
   downsampled_results <- lapply(1:nSamples, function(i) {
@@ -40,7 +43,8 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
       nTrials = nTrials,
       CheckRemoved = CheckRemoved,
       CheckThreefold = CheckThreefold,
-      MaxCores = 1
+      OptimizeBetween = OptimizeBetween,
+      MaxCores = MaxCores
     )
 
     list(
@@ -59,7 +63,7 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
   calculate_pde <- function(data, pareto_radius = 0.05) {
     pde_result <- ParetoDensityEstimationIE(
       Data = data,
-      paretoRadius = pareto_radius,
+      paretoRadius = NULL,
       kernels = seq(min(data_df$Data), max(data_df$Data), by = 0.001)
     )
     data.frame(x = pde_result$kernels, y = pde_result$paretoDensity)
@@ -159,7 +163,7 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
 
   p_statistics <- ggplot(stats_long, aes(x = Comparison, y = value, color = Comparison)) +
     geom_beeswarm(method = "compactswarm", show.legend = FALSE) +
-    facet_wrap(~ Test, scales = "free", nrow = 1) +
+    facet_wrap(~Test, scales = "free", nrow = 1) +
     theme_light() +
     theme(
       legend.position = "bottom",
@@ -170,6 +174,15 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
     ) +
     scale_color_colorblind() +
     labs(y = "Test Statistic Value", title = "Distribution comparison statistics")
+
+  n_facets <- length(unique(stats_long[["Test"]]))
+  # Check if ylimits_list is a list of the right length (or NULL)
+  use_y_limits <- is.list(ylimits_list) && length(ylimits_list) == n_facets && use_y_limits
+
+  if (use_y_limits) {
+    # Add individual scales per facet
+    p_statistics <- p_statistics + facetted_pos_scales(y = ylimits_list)
+  }
 
   # Return results
   return(list(
@@ -206,10 +219,45 @@ generate_gmm_data <- function() {
   data.frame(Cls = class_vector, Data = data_vector)
 }
 
+
 # Experiment:
+
+# y limits
+my_limits <- list(
+  scale_y_continuous(limits = c(0, 150000)),
+  scale_y_continuous(limits = c(0, 1)),
+  scale_y_continuous(limits = c(0, 12)),
+  scale_y_continuous(limits = c(0, 80)),
+  scale_y_continuous(limits = c(0, 0.65)),
+  scale_y_continuous(limits = c(0, 0.15)),
+  scale_y_continuous(limits = c(0, 0.25)),
+  scale_y_continuous(limits = c(0, 0.55))
+)
+
+# Generate data
 df_art_data_3GMM <- generate_gmm_data()
-results <- downsample_analysis(df_art_data_3GMM, nSamples = 10, Size = 1500, nTrials = 1,
-                               CheckRemoved = FALSE, CheckThreefold = FALSE)
-print(results$plots$reduced_data_plot)
-print(results$plots$removed_data_plot)
-print(results$plots$statistics_plot)
+
+# Perfrom experimts with different number of trials
+list_of_nTrails <- c(1, 1000000)
+
+experiment_3Gaussians_results <- lapply(list_of_nTrails, function(nTrials) {
+  results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 10, Size = 50, nTrials = nTrials,
+                               CheckRemoved = TRUE, CheckThreefold = TRUE, OptimizeBetween = FALSE, use_y_limits = TRUE, ylimits_list = my_limits,
+                               MaxCores = parallel::detectCores()-1)
+})
+names(experiment_3Gaussians_results) <- list_of_nTrails
+
+# Combine results plots
+p_experiment_3Gaussians_results <- cowplot::plot_grid(
+    experiment_3Gaussians_results[[1]]$plots$reduced_data_plot,
+    experiment_3Gaussians_results[[1]]$plots$removed_data_plot,
+    experiment_3Gaussians_results[[1]]$plots$statistics_plot,
+    experiment_3Gaussians_results[[2]]$plots$reduced_data_plot,
+    experiment_3Gaussians_results[[2]]$plots$removed_data_plot,
+    experiment_3Gaussians_results[[2]]$plots$statistics_plot,
+    labels = "AUTO", nrow = 2, rel_widths = c(2,2,3)
+)
+print(p_experiment_3Gaussians_results)
+
+# Save combined plot
+ggsave(filename = "p_experiment_3Gaussians_results.svg", plot = p_experiment_3Gaussians_results, width = 18, height = 12)

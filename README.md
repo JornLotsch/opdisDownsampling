@@ -85,6 +85,7 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
 | `CheckRemoved`  | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
 | `CheckThreefold`| Also also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical)         |
+| `OptimizeBetween`| Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisions are not considered.  |
 | `JobSize`       | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
 | `verbose`       | Print diagnostic information about memory usage and chunking (logical)                                                                                |
 
