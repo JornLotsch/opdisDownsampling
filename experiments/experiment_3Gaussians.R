@@ -170,7 +170,7 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
       legend.background = element_rect(fill = alpha("white", 0.5)),
       strip.background = element_rect(fill = "cornsilk"),
       strip.text = element_text(colour = "black"),
-      axis.text.x = element_text(angle = 90, hjust = 1)
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)
     ) +
     scale_color_colorblind() +
     labs(y = "Test Statistic Value", title = "Distribution comparison statistics")
@@ -229,6 +229,7 @@ my_limits <- list(
   scale_y_continuous(limits = c(0, 12)),
   scale_y_continuous(limits = c(0, 80)),
   scale_y_continuous(limits = c(0, 0.65)),
+  scale_y_continuous(limits = c(0, 18)),
   scale_y_continuous(limits = c(0, 0.15)),
   scale_y_continuous(limits = c(0, 0.25)),
   scale_y_continuous(limits = c(0, 0.55))
