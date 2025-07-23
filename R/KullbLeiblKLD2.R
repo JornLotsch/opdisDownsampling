@@ -18,37 +18,37 @@ KullbLeiblKLD2 <- function(P, Q, sym = TRUE) {
   # Remove NA values from the input vectors
   P <- P[!is.na(P)]
   Q <- Q[!is.na(Q)]
-  
+
   # Combine the unique values from both distributions
   x <- sort(unique(c(P, Q)), na.last = TRUE)
-  AnzUniqX <- length(x)
-  
+  num_unique_x <- length(x)
+
   # If there are less than 2 unique values, return 0 for the KLD
-  if (AnzUniqX < 2) {
+  if (num_unique_x < 2) {
     return(list(KLD = 0, p = 1, q = 1, x = x))
   }
-  
+
   # Calculate the frequency distributions
-  FreqP <- tabulate(match(P, x))
-  FreqQ <- tabulate(match(Q, x))
-  p <- FreqP / sum(FreqP)
-  q <- FreqQ / sum(FreqQ)
-  
+  freq_p <- tabulate(match(P, x))
+  freq_q <- tabulate(match(Q, x))
+  p <- freq_p / sum(freq_p)
+  q <- freq_q / sum(freq_q)
+
   # Calculate the Kullback-Leibler divergence
   EPS <- 1 / 10000
-  LogP <- log(p[p > EPS])
-  LogQ <- log(q[q > EPS])
-  LogPzuQ <- log(p[p > EPS] / q[q > EPS])
-  LogQzuP <- log(q[q > EPS] / p[p > EPS])
-  
-  KLDpq <- sum(LogP * LogPzuQ, na.rm = TRUE) / AnzUniqX
-  KLDqp <- sum(LogQ * LogQzuP, na.rm = TRUE) / AnzUniqX
-  
+  log_p <- log(p[p > EPS])
+  log_q <- log(q[q > EPS])
+  log_p_to_q <- log(p[p > EPS] / q[q > EPS])
+  log_q_to_p <- log(q[q > EPS] / p[p > EPS])
+
+  KLDpq <- sum(log_p * log_p_to_q, na.rm = TRUE) / num_unique_x
+  KLDqp <- sum(log_q * log_q_to_p, na.rm = TRUE) / num_unique_x
+
   if (sym) {
     KLD <- KLDqp + KLDpq
   } else {
     KLD <- KLDpq
   }
-  
+
   return(list(KLD = KLD, p = p, q = q, x = x))
 }
