@@ -239,12 +239,12 @@ my_limits <- list(
 df_art_data_3GMM <- generate_gmm_data()
 
 # Perform experiments with different number of trials
-list_of_nTrails <- c(1, 1)
+list_of_nTrails <- c(1, 1000000)
 list_of_sizes <- c(50, 1500)
 
 experiment_3Gaussians_results <- lapply(list_of_sizes, function(Size) {
   experiment_3Gaussians_results_1 <- lapply(list_of_nTrails, function(nTrials) {
-    results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 1, Size = 50, nTrials = nTrials,
+    results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 10, Size = 50, nTrials = nTrials,
                                    CheckRemoved = TRUE, CheckThreefold = TRUE, OptimizeBetween = FALSE, use_y_limits = TRUE, ylimits_list = my_limits,
                                    MaxCores = parallel::detectCores() - 1)
   })
