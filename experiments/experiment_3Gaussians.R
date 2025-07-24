@@ -244,7 +244,7 @@ df_art_data_3GMM <- generate_gmm_data()
 list_of_OptimizeBetween <- c(TRUE, FALSE)
 list_of_CheckRemovedThreefold <- c(TRUE, FALSE)
 list_of_sizes <- c(50, 1500, round(nrow(df_art_data_3GMM)) * 0.8)
-list_of_nTrials <- c(1, 10)
+list_of_nTrials <- c(1, 1000000)
 
 experiment_3Gaussians_results <-
   lapply(list_of_OptimizeBetween, function(OptimizeBetween) {
