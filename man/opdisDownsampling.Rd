@@ -49,7 +49,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
       the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
 
  \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation. 
-      If set, all other comparisions are not performed.}
+      If set, all other comparisons are not performed.}
 
  \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
       If \code{0} (default), no chunking is applied. If \code{NULL}, an optimal chunk size is automatically calculated based on data dimensions,

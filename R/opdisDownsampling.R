@@ -21,7 +21,7 @@
 #' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
 #'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
 #' @param OptimizeBetween A logical value indicating whether to optimize the reduced part 
-#'   of the data for distribution equality with the removed part. If set, all other comparisions are not performed.
+#'   of the data for distribution equality with the removed part. If set, all other comparisons are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
@@ -169,7 +169,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     AD_reduced_vs_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
                                  dimnames = list(NULL, var_names))
 
-    # Fill matrices efficiently
+    # Fill matrices
     for (i in seq_len(n_trials)) {
       if (!is.null(ReducedDiag[[i]])) {
         AD_reduced_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced"]]
@@ -187,23 +187,29 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   }
 
   # Find best subsample
-  if (!CheckRemoved && !OptimizeBetween) {
-    BestTrial <- which.min(apply(AD_reduced_statMat, 1, max, na.rm = TRUE))
+  if (OptimizeBetween) {
+    BestTrial <- which.min(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE))
   } else {
-    if (OptimizeBetween) {
-      BestTrial <- which.min(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE))
+    if (CheckThreefold && CheckRemoved) {
+      R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE), ties.method = "first")
+      R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
+      R_AD_reduced_vs_removed_statMat <- rank(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
+      R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat, R_AD_reduced_vs_removed_statMat)
+      BestTrial <- which.min(apply(R_AD_all_statMat, 1, max, na.rm = TRUE))
+      rm(R_AD_all_statMat) # Clean up immediately
     } else {
-      if (!CheckThreefold) {
-        AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat)
-        BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
-        rm(AD_all_statMat) # Clean up immediately
+      if (CheckRemoved) {
+        R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE), ties.method = "first")
+        R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
+        R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat)
+        BestTrial <- which.min(apply(R_AD_all_statMat, 1, max, na.rm = TRUE))
+        rm(R_AD_all_statMat) # Clean up immediately
       } else {
-        AD_all_statMat <- cbind(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
-        BestTrial <- which.min(apply(AD_all_statMat, 1, max, na.rm = TRUE))
-        rm(AD_all_statMat) # Clean up immediately
+        BestTrial <- which.min(apply(AD_reduced_statMat, 1, max, na.rm = TRUE))
       }
     }
   }
+
   # Clean up stat matrices
   rm(AD_reduced_statMat, AD_removed_statMat)
   gc()
