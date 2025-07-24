@@ -8,7 +8,7 @@
 #'   will be assigned to a single class.
 #' @param Size A numeric value specifying the desired size of the downsampled dataset.
 #'   If 0 < Size < 1, it is treated as a proportion of the original dataset.
-#'   If Size >= 1, it is treated as the absolute number of instances to retain.#'
+#'   If Size >= 1, it is treated as the absolute number of instances to retain.
 #' @param Seed An integer value to be used as the random seed for reproducibility.
 #' @param nTrials The number of trials to perform when sampling the data.
 #' @param TestStat A character string specifying the statistical test to be used for
@@ -16,11 +16,11 @@
 #' @param MaxCores The maximum number of cores to use for parallel processing.
 #' @param PCAimportance A logical value indicating whether to use PCA to identify
 #'   relevant variables.
-#' @param CheckRemoved A logical value indicating whether to also optimize the removed part 
+#' @param CheckRemoved A logical value indicating whether to also optimize the removed part
 #'   of the data for distribution equality with the original.
-#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part 
+#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part
 #'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
-#' @param OptimizeBetween A logical value indicating whether to optimize the reduced part 
+#' @param OptimizeBetween A logical value indicating whether to optimize the reduced part
 #'   of the data for distribution equality with the removed part. If set, all other comparisons are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
@@ -154,64 +154,90 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     OptimizeBetween = OptimizeBetween,
                                     JobSize = JobSize)
 
-  # Memory-efficient matrix construction
-  # Pre-allocate matrices instead of using do.call(rbind, ...)
-  n_trials <- length(ReducedDiag)
-  if (n_trials > 0 && !is.null(ReducedDiag[[1]])) {
-    n_vars <- length(ReducedDiag[[1]][[1]])
-    var_names <- names(ReducedDiag[[1]][[1]])
+  # Validate and process trial results
+  validate_reduced_diag(ReducedDiag)
 
-    # Pre-allocate matrices
+  # Memory-efficient matrix construction with enhanced error handling
+  n_trials <- length(ReducedDiag)
+
+  # Enhanced validation of data structure
+  if (!is.list(ReducedDiag[[1]]) ||
+    is.null(ReducedDiag[[1]][[1]]) ||
+    length(ReducedDiag[[1]][[1]]) == 0) {
+    stop("opdisDownsampling: Invalid structure in trial results.")
+  }
+
+  n_vars <- length(ReducedDiag[[1]][[1]])
+  var_names <- names(ReducedDiag[[1]][[1]])
+
+  # Pre-allocate matrices with error handling
+  tryCatch({
     AD_reduced_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
                                  dimnames = list(NULL, var_names))
     AD_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
                                  dimnames = list(NULL, var_names))
     AD_reduced_vs_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
-                                 dimnames = list(NULL, var_names))
+                                            dimnames = list(NULL, var_names))
+  }, error = function(e) {
+    stop(sprintf("opdisDownsampling: Failed to allocate matrices: %s", e$message))
+  })
 
-    # Fill matrices
-    for (i in seq_len(n_trials)) {
-      if (!is.null(ReducedDiag[[i]])) {
-        AD_reduced_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced"]]
-        AD_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_removed"]]
-        AD_reduced_vs_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced_vs_removed"]]
-      }
+  # Fill matrices with enhanced validation
+  for (i in seq_len(n_trials)) {
+    if (!is.null(ReducedDiag[[i]])) {
+      tryCatch({
+        # Validate data structure for each trial
+        if (is.list(ReducedDiag[[i]]) &&
+          all(c("ADv_reduced", "ADv_removed", "ADv_reduced_vs_removed") %in% names(ReducedDiag[[i]]))) {
+
+          AD_reduced_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced"]]
+          AD_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_removed"]]
+          AD_reduced_vs_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced_vs_removed"]]
+        } else {
+          warning(sprintf("opdisDownsampling: Invalid data structure in trial %d, skipping.", i),
+                  call. = FALSE)
+        }
+      }, error = function(e) {
+        warning(sprintf("opdisDownsampling: Error processing trial %d: %s", i, e$message),
+                call. = FALSE)
+      })
     }
-
-    # Clean up the large ReducedDiag object early
-    rm(ReducedDiag)
-    gc()
-
-  } else {
-    stop("opdisDownsampling: No valid results from sample_and_analyze.")
   }
 
-  # Find best subsample
-  if (OptimizeBetween) {
-    BestTrial <- which.min(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE))
-  } else {
-    if (CheckThreefold && CheckRemoved) {
-      R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE), ties.method = "first")
-      R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
-      R_AD_reduced_vs_removed_statMat <- rank(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
-      R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat, R_AD_reduced_vs_removed_statMat)
-      BestTrial <- which.min(apply(R_AD_all_statMat, 1, max, na.rm = TRUE))
-      rm(R_AD_all_statMat) # Clean up immediately
+  # Clean up the large ReducedDiag object early
+  rm(ReducedDiag)
+  gc()
+
+  # Validate matrices before proceeding
+  validate_matrices(list(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat),
+                    c("AD_reduced_statMat", "AD_removed_statMat", "AD_reduced_vs_removed_statMat"))
+
+  # Find best subsample using refactored selection logic with error handling
+  BestTrial <- tryCatch({
+    if (OptimizeBetween) {
+      select_best_trial_optimize_between(AD_reduced_vs_removed_statMat)
+    } else if (CheckThreefold && CheckRemoved) {
+      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+    } else if (CheckRemoved) {
+      select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat)
     } else {
-      if (CheckRemoved) {
-        R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE), ties.method = "first")
-        R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE), ties.method = "first")
-        R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat)
-        BestTrial <- which.min(apply(R_AD_all_statMat, 1, max, na.rm = TRUE))
-        rm(R_AD_all_statMat) # Clean up immediately
-      } else {
-        BestTrial <- which.min(apply(AD_reduced_statMat, 1, max, na.rm = TRUE))
-      }
+      select_best_trial_reduced_only(AD_reduced_statMat)
     }
+  }, error = function(e) {
+    warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),
+            call. = FALSE)
+    1
+  })
+
+  # Validate BestTrial result
+  if (is.na(BestTrial) || BestTrial < 1 || BestTrial > n_trials) {
+    warning(sprintf("opdisDownsampling: Invalid best trial index (%s). Using first trial.",
+                    as.character(BestTrial)), call. = FALSE)
+    BestTrial <- 1
   }
 
-  # Clean up stat matrices
-  rm(AD_reduced_statMat, AD_removed_statMat)
+  # Clean up stat matrices - moved after BestTrial validation
+  rm(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
   gc()
 
   # Get the best subsample

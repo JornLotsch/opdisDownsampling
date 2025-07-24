@@ -8,7 +8,8 @@
 #' @param Size Target size for downsampled data
 #' @param nTrials Number of trials for opdisDownsampling
 #' @param CheckRemoved Logical; if TRUE, also optimize the removed part of the data for distribution equality with the original
-#' @param CheckThreefold Logical; if TRUE, also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE
+#' @param CheckThreefold Logical; if TRUE, also optimize the reduced part of the data for distribution equality with the removed part. 
+#'        Ignored when CheckRemoved is FALSE
 #' @param path_functions Path to custom distribution comparison functions
 #' @return List containing plots and statistical comparison results
 downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1,
@@ -23,13 +24,14 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
   library(ggbeeswarm)
   library(ggh4x)
   library(cowplot)
+  library(patchwork)
 
   # Source custom functions for distribution comparison
-  source(paste0(path_functions, "R/", "amrdd.R"))
-  source(paste0(path_functions, "R/", "CompDistrib.R"))
-  source(paste0(path_functions, "R/", "EucDist.R"))
-  source(paste0(path_functions, "R/", "KullbLeiblKLD2.R"))
-  source(paste0(path_functions, "R/", "SmoothDensHist1dim.R"))
+  source(paste0(path_functions, "R/", "dist_amrdd.R"))
+  source(paste0(path_functions, "R/", "dist_compare.R"))
+  source(paste0(path_functions, "R/", "dist_euclidean.R"))
+  source(paste0(path_functions, "R/", "dist_kld.R"))
+  source(paste0(path_functions, "R/", "density_smooth_hist.R"))
   source(paste0(path_functions, "R/", "utils.R"))
   source(paste0(path_functions, "experiments/", "ParetoDensityEstimationIE2.R"))
 
@@ -60,10 +62,10 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
   names(removed_data_df) <- paste0("Sample_", 1:nSamples)
 
   # Helper function for PDE calculation
-  calculate_pde <- function(data, pareto_radius = 0.05) {
-    pde_result <- ParetoDensityEstimationIE(
+  calculate_pde <- function(data, pareto_radius = NULL) {
+    pde_result <- pareto_density_estimation_ie(
       Data = data,
-      paretoRadius = NULL,
+      paretoRadius = pareto_radius,
       kernels = seq(min(data_df$Data), max(data_df$Data), by = 0.001)
     )
     data.frame(x = pde_result$kernels, y = pde_result$paretoDensity)
@@ -159,7 +161,7 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
     )
   )
 
-  stats_long <- melt(stats_df)
+  stats_long <- suppressMessages(melt(stats_df))
 
   p_statistics <- ggplot(stats_long, aes(x = Comparison, y = value, color = Comparison)) +
     geom_beeswarm(method = "compactswarm", show.legend = FALSE) +
@@ -239,30 +241,72 @@ my_limits <- list(
 df_art_data_3GMM <- generate_gmm_data()
 
 # Perform experiments with different number of trials
-list_of_nTrails <- c(1, 1000000)
-list_of_sizes <- c(50, 1500)
+list_of_OptimizeBetween <- c(TRUE, FALSE)
+list_of_CheckRemovedThreefold <- c(TRUE, FALSE)
+list_of_sizes <- c(50, 1500, round(nrow(df_art_data_3GMM)) * 0.8)
+list_of_nTrials <- c(1, 10)
 
-experiment_3Gaussians_results <- lapply(list_of_sizes, function(Size) {
-  experiment_3Gaussians_results_1 <- lapply(list_of_nTrails, function(nTrials) {
-    results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 10, Size = 50, nTrials = nTrials,
-                                   CheckRemoved = TRUE, CheckThreefold = TRUE, OptimizeBetween = FALSE, use_y_limits = TRUE, ylimits_list = my_limits,
-                                   MaxCores = parallel::detectCores() - 1)
+experiment_3Gaussians_results <-
+  lapply(list_of_OptimizeBetween, function(OptimizeBetween) {
+
+    Res1 <- lapply(list_of_CheckRemovedThreefold, function(CheckRemovedThreefold) {
+      Res2 <- lapply(list_of_sizes, function(Size) {
+        experiment_3Gaussians_results_1 <- lapply(list_of_nTrials, function(nTrials) {
+          results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 10, Size = Size, nTrials = nTrials,
+                                         CheckRemoved = CheckRemovedThreefold, CheckThreefold = CheckRemovedThreefold,
+                                         OptimizeBetween = OptimizeBetween, use_y_limits = TRUE, ylimits_list = my_limits,
+                                         MaxCores = parallel::detectCores() - 1)
+          return(results)
+        })
+        names(experiment_3Gaussians_results_1) <- paste0("nTrials", list_of_nTrials)
+
+        # Combine results plots
+        p_experiment_3Gaussians_results <- cowplot::plot_grid(
+          experiment_3Gaussians_results_1[[1]]$plots$reduced_data_plot,
+          experiment_3Gaussians_results_1[[1]]$plots$removed_data_plot,
+          experiment_3Gaussians_results_1[[1]]$plots$statistics_plot,
+          experiment_3Gaussians_results_1[[2]]$plots$reduced_data_plot,
+          experiment_3Gaussians_results_1[[2]]$plots$removed_data_plot,
+          experiment_3Gaussians_results_1[[2]]$plots$statistics_plot,
+          labels = "AUTO", nrow = 2, rel_widths = c(2, 2, 3)
+        ) +
+          plot_annotation(
+            title = paste0("Data splits: Comparison of distributions with original data: ",
+                           format(Size, scientific = FALSE), " points sampled from originally ", nrow(df_art_data_3GMM), "."),
+            subtitle = ifelse(OptimizeBetween,
+                              paste0("Top row: First split, Bottom row: Best of ",
+                                     format(list_of_nTrials[2], scientific = FALSE), " splits; Training/testing optimized"),
+                              ifelse(CheckRemovedThreefold,
+                                     paste0("Top row: First split, Bottom row: Best of ",
+                                            format(list_of_nTrials[2], scientific = FALSE), " splits; Threefold optimized"),
+                                     paste0("Top row: First split, Bottom row: Best of ", format(list_of_nTrials[2], scientific = FALSE),
+                                            " splits; Optimized for training/testing versus the original.")))
+          ) &
+          theme(
+            plot.tag.position = c(0.5, 1),
+            plot.tag = element_text(size = 14, face = "bold", vjust = 0)
+          )
+
+        print(p_experiment_3Gaussians_results)
+
+        # Save combined plot
+        ggsave(filename =
+                 paste0("p_experiment_3Gaussians_results",
+                        "_CheckRemovedThreefold", CheckRemovedThreefold,
+                        "_Size", Size,
+                        "_OptimizeBetween", OptimizeBetween,
+                        ".svg"), plot = p_experiment_3Gaussians_results, width = 18, height = 12)
+
+        return(list(
+          results = experiment_3Gaussians_results_1,
+          plot = p_experiment_3Gaussians_results
+        ))
+      })
+      names(Res2) <- paste0("Size", list_of_sizes)
+      return(Res2)
+    })
+    names(Res1) <- paste0("CheckRemovedThreefold", list_of_CheckRemovedThreefold)
+    return(Res1)
   })
 
-  # Combine results plots
-  p_experiment_3Gaussians_results <- cowplot::plot_grid(
-  experiment_3Gaussians_results_1[[1]]$plots$reduced_data_plot,
-  experiment_3Gaussians_results_1[[1]]$plots$removed_data_plot,
-  experiment_3Gaussians_results_1[[1]]$plots$statistics_plot,
-  experiment_3Gaussians_results_1[[2]]$plots$reduced_data_plot,
-  experiment_3Gaussians_results_1[[2]]$plots$removed_data_plot,
-  experiment_3Gaussians_results_1[[2]]$plots$statistics_plot,
-    labels = "AUTO", nrow = 2, rel_widths = c(2, 2, 3)
-  )
-  print(p_experiment_3Gaussians_results)
-  return(plot = p_experiment_3Gaussians_results)
-})
-
-# Save combined plot
-ggsave(filename = paste0("p_experiment_3Gaussians_results", "_", list_of_sizes[1], ".svg"), plot = experiment_3Gaussians_results[1], width = 18, height = 12)
-ggsave(filename = paste0("p_experiment_3Gaussians_results", "_", list_of_sizes[2], ".svg"), plot = experiment_3Gaussians_results[2], width = 18, height = 12)
+names(experiment_3Gaussians_results) <- paste0("OptimizeBetween", list_of_OptimizeBetween)
