@@ -275,7 +275,7 @@ experiment_3Gaussians_results <-
                            format(Size, scientific = FALSE), " points sampled from originally ", nrow(df_art_data_3GMM), "."),
             subtitle = ifelse(OptimizeBetween,
                               paste0("Top row: First split, Bottom row: Best of ",
-                                     format(list_of_nTrials[2], scientific = FALSE), " splits; Training/validation optimized"),
+                                     format(list_of_nTrials[2], scientific = FALSE), " splits; Training/testing versus validation optimized"),
                               ifelse(CheckRemovedThreefold,
                                      paste0("Top row: First split, Bottom row: Best of ",
                                             format(list_of_nTrials[2], scientific = FALSE), " splits; Threefold optimized"),
