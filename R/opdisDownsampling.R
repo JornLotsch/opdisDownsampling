@@ -18,13 +18,20 @@
 #'   relevant variables.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part
 #'   of the data for distribution equality with the original.
-#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part
-#'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
 #' @param OptimizeBetween A logical value indicating whether to optimize the reduced part
 #'   of the data for distribution equality with the removed part. If set, all other comparisons are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If NULL, automatically determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
+#' @param NonNoiseSelection A logical value indicating whether to use non-uniform
+#'   distribution tests to identify relevant variables.
+#' @param UniformTestStat A character string specifying the statistical test to be used for
+#'   non-uniform variable selection. Available options are: "ks" (Kolmogorov-Smirnov),
+#'   "ad" (Anderson-Darling), "kuiper", "cvm" (Cramér-von Mises), "wass" (Wasserstein),
+#'   "dts" (Distributional Transform Statistic), "kld" (Kullback-Leibler divergence),
+#'   "amrdd" (Average Mean Root of Distributional Differences), and "euc" (Euclidean distance).
+#'   Only used when NonNoiseSelection = TRUE (default: "ks").
+#' @param UniformThreshold Threshold value for non-uniform variable selection (default: 0.1).
 #'
 #' @return A list with the following elements:
 #'   - `ReducedData`: The downsampled dataset.
@@ -41,17 +48,13 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
-                              JobSize = 0, verbose = FALSE) {
+                              CheckRemoved = FALSE, OptimizeBetween = FALSE,
+                              JobSize = 0, verbose = FALSE, NonNoiseSelection = FALSE,
+                              UniformTestStat = "ks", UniformThreshold = 0.05) {
 
-  # Set CheckThreefold to FALSE when CheckRemoved is FALSE
-  if (!CheckRemoved) CheckThreefold <- FALSE
 
-  # Set CheckThreefold and CheckRemoved to FALSE when OptimizeBetween is TRUE
-  if (OptimizeBetween) {
-    CheckRemoved <- FALSE
-    CheckThreefold <- FALSE
-  }
+  # Set CheckRemoved to FALSE when OptimizeBetween is TRUE
+  if (OptimizeBetween) CheckRemoved <- FALSE
 
   # Create empty data frame
   dfx <- data.frame(Data)
@@ -148,9 +151,11 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     Size = Size,
                                     list.of.seeds = list.of.seeds,
                                     PCAimportance = PCAimportance,
+                                    NonNoiseSelection = NonNoiseSelection,
+                                    UniformTestStat = UniformTestStat,
+                                    UniformThreshold = UniformThreshold,
                                     nProc = nProc,
                                     CheckRemoved = CheckRemoved,
-                                    CheckThreefold = CheckThreefold,
                                     OptimizeBetween = OptimizeBetween,
                                     JobSize = JobSize)
 
@@ -216,8 +221,6 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   BestTrial <- tryCatch({
     if (OptimizeBetween) {
       select_best_trial_optimize_between(AD_reduced_vs_removed_statMat)
-    } else if (CheckThreefold && CheckRemoved) {
-      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
     } else if (CheckRemoved) {
       select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat)
     } else {

@@ -8,12 +8,10 @@
 #' @param Size Target size for downsampled data
 #' @param nTrials Number of trials for opdisDownsampling
 #' @param CheckRemoved Logical; if TRUE, also optimize the removed part of the data for distribution equality with the original
-#' @param CheckThreefold Logical; if TRUE, also optimize the reduced part of the data for distribution equality with the removed part. 
-#'        Ignored when CheckRemoved is FALSE
 #' @param path_functions Path to custom distribution comparison functions
 #' @return List containing plots and statistical comparison results
 downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1,
-                                CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
+                                CheckRemoved = FALSE, OptimizeBetween = FALSE,
                                 use_y_limits = FALSE, ylimits_list = NULL, MaxCores = getOption("mc.cores", 2L),
                                 path_functions = "/home/joern/Aktuell/DownSamplingStructure/12RLibrary/opdisDownsampling/") {
 
@@ -33,10 +31,12 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
   source(paste0(path_functions, "R/", "dist_kld.R"))
   source(paste0(path_functions, "R/", "density_smooth_hist.R"))
   source(paste0(path_functions, "R/", "utils.R"))
-  source(paste0(path_functions, "experiments/", "ParetoDensityEstimationIE2.R"))
+  source(paste0(path_functions, "experiments/", "pareto_density_estimation_ie.R"))
 
   # Perform downsampling iterations
   downsampled_results <- lapply(1:nSamples, function(i) {
+    cat(paste0("  Iteration ", i, "/", nSamples, "\n"))
+
     result <- opdisDownsampling::opdisDownsampling(
       Data = data_df$Data,
       Cls = data_df$Cls,
@@ -44,7 +44,6 @@ downsample_analysis <- function(data_df, nSamples = 10, Size = 1500, nTrials = 1
       Seed = i + (i - 1) * 1000000,
       nTrials = nTrials,
       CheckRemoved = CheckRemoved,
-      CheckThreefold = CheckThreefold,
       OptimizeBetween = OptimizeBetween,
       MaxCores = MaxCores
     )
@@ -253,7 +252,7 @@ experiment_3Gaussians_results <-
       Res2 <- lapply(list_of_sizes, function(Size) {
         experiment_3Gaussians_results_1 <- lapply(list_of_nTrials, function(nTrials) {
           results <- downsample_analysis(data_df = df_art_data_3GMM, nSamples = 10, Size = Size, nTrials = nTrials,
-                                         CheckRemoved = CheckRemovedThreefold, CheckThreefold = CheckRemovedThreefold,
+                                         CheckRemoved = CheckRemovedThreefold,
                                          OptimizeBetween = OptimizeBetween, use_y_limits = TRUE, ylimits_list = my_limits,
                                          MaxCores = parallel::detectCores() - 1)
           return(results)

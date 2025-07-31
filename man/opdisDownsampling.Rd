@@ -7,8 +7,10 @@
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE, 
-  OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE)
+  PCAimportance = FALSE, CheckRemoved = FALSE,
+  OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE,
+  NonNoiseSelection = FALSE, UniformTestStat = "ks",
+  UniformThreshold = 0.05)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
@@ -33,8 +35,9 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
      \item{\code{"dts"}: Distributional Transform Statistic}
      \item{\code{"ks"}: Kolmogorov–Smirnov statistic}
      \item{\code{"kld"}: Kullback–Leibler divergence (via \code{KullbLeiblKLD2()})}
-     \item{\code{"amrdd"}: Average Mean Root of Distributional Differences (via \code{amrdd()})}
+     \item{\code{"amrdd"}: Average mean root of distributional differences (via \code{amrdd()})}
      \item{\code{"euc"}: Euclidean distance (via \code{EucDist()})}
+     \item{\code{"nent"}: Absolute normalized entropy difference (via \code{abs_norm_entropy_diff()})}
    }
  }
 
@@ -45,10 +48,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases,
       which can be used for data splits into training/test and validation.}
 
- \item{CheckThreefold}{Logical; if \code{TRUE}, the optimization also includes the equal distribution of
-      the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
-
- \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation. 
+ \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation.
       If set, all other comparisons are not performed.}
 
  \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
@@ -60,6 +60,20 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{verbose}{Logical; if \code{TRUE}, prints diagnostic information about chunk size calculation,
       including data dimensions, estimated memory usage, and chosen chunking strategy. Useful for
       understanding memory usage patterns and debugging performance issues (default: \code{FALSE}).}
+
+ \item{NonNoiseSelection}{Logical; if \code{TRUE}, uses statistical distribution tests to identify
+      and select only variables that significantly deviate from uniform distributions. This feature
+      helps filter out noise variables and focus optimization on meaningful signal variables
+      (default: \code{FALSE}).}
+
+ \item{UniformTestStat}{Character string specifying the statistical test for non-uniform variable
+      selection. Uses the same test statistics as \code{TestStat}. Only used when
+      \code{NonNoiseSelection = TRUE} (default: \code{"ks"}).}
+
+ \item{UniformThreshold}{Numeric threshold value above which variables are considered significantly
+      non-uniform. Higher values make the selection more stringent. Only used when
+      \code{NonNoiseSelection = TRUE} (default: \code{0.1}).}
+
 }
 \value{
   Returns a list with the following elements:
@@ -80,6 +94,21 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
 
   For very large datasets or memory-constrained systems, smaller chunks are automatically selected to prevent
   memory exhaustion, while smaller datasets use larger chunks to minimize computational overhead.
+
+  \strong{Variable Selection Methods:}
+
+  Two variable selection methods can be used individually or in combination:
+  \itemize{
+    \item{\strong{PCA-based selection} (\code{PCAimportance = TRUE}): Identifies variables with high loadings
+          in the first principal components, focusing on variables that capture the most variance in the data.}
+    \item{\strong{Non-uniform selection} (\code{NonNoiseSelection = TRUE}): Identifies variables that
+          significantly deviate from uniform distributions, helping to filter out noise variables and
+          focus on meaningful signal variables.}
+  }
+
+  When both methods are enabled, the function first attempts to use their intersection. If no variables
+  are found in the intersection, it uses their union. If no variables are selected by any method,
+  the first variable is used to ensure the analysis can proceed, with a warning message displayed.
 }
 \references{
   Lotsch, J., Malkusch, S., Ultsch, A. (2021):\\
@@ -100,6 +129,20 @@ data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
   Size = 50, MaxCores = 1, JobSize = 25, verbose = TRUE)
 
+## Example: Use non-uniform variable selection to filter noise variables
+data(iris)
+# Add some uniform noise variables to demonstrate filtering
+noisy_iris <- cbind(iris[,1:4],
+                    noise1 = runif(nrow(iris), 0, 10),
+                    noise2 = runif(nrow(iris), -5, 5))
+Iris_filtered <- opdisDownsampling(Data = noisy_iris, Cls = as.integer(iris$Species),
+  Size = 50, NonNoiseSelection = TRUE, UniformThreshold = 0.05, MaxCores = 1)
+
+## Example: Combine PCA and non-uniform selection
+data(iris)
+Iris_combined <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
+  Size = 50, PCAimportance = TRUE, NonNoiseSelection = TRUE, MaxCores = 1)
+
 ## Example: Memory-efficient processing of large dataset with many trials
 \dontrun{
 # For large datasets, automatic chunking optimizes memory usage
@@ -113,3 +156,5 @@ LargeDataSample <- opdisDownsampling(Data = large_dataset,
 \keyword{distribution preservation}
 \keyword{sampling}
 \keyword{memory optimization}
+\keyword{variable selection}
+\keyword{noise filtering}

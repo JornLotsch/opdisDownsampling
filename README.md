@@ -73,22 +73,39 @@ CustomSample <- opdisDownsampling(Data = my_data,
 
 ### Arguments
 
-| Argument        | Description                                                                                                                                           |
-|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Data`          | Numeric data frame or matrix to downsample                                                                                                            |
-| `Cls`           | Class membership vector; if missing, all data assigned to one class                                                                                   |
-| `Size`          | Proportion (0–1) or absolute number of rows to retain                                                                                                 |
-| `Seed`          | Integer for reproducibility                                                                                                                           |
-| `nTrials`       | Number of sampling trials (default: 1,000)                                                                                                            |
-| `TestStat`      | Statistical test for distribution comparison (default: `"ad"`). Available options: `"ad"`, `"kuiper"`, `"cvm"`, `"wass"`, `"dts"`, `"ks"`, `"kld"`, `"amrdd"`, `"euc"` |
-| `MaxCores`      | Maximum cores for parallel processing                                                                                                                 |
-| `PCAimportance` | Use PCA for variable selection (logical)                                                                                                              |
-| `CheckRemoved`  | Also also optimize the removed part  of the data for distribution equality with the original (logical)                                                |
-| `CheckThreefold`| Also also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical)         |
-| `OptimizeBetween`| Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisions are not considered.  |
-| `JobSize`       | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                        |
-| `verbose`       | Print diagnostic information about memory usage and chunking (logical)                                                                                |
+| Argument | Description |
+| --- | --- |
+| `Data` | Numeric data frame or matrix to downsample |
+| `Cls` | Class membership vector; if missing, all data assigned to one class |
+| `Size` | Proportion (0–1) or absolute number of rows to retain |
+| `Seed` | Integer for reproducibility |
+| `nTrials` | Number of sampling trials (default: 1,000) |
+| `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
+| `MaxCores` | Maximum cores for parallel processing |
+| `PCAimportance` | Use PCA for variable selection (logical) |
+| `CheckRemoved` | Also optimize the removed part of the data for distribution equality with the original (logical) |
+| `OptimizeBetween` | Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisons are not considered. |
+| `JobSize` | Number of trials per chunk for memory optimization (auto-calculated if `NULL`) |
+| `verbose` | Print diagnostic information about memory usage and chunking (logical) |
+| `NonNoiseSelection` | Use statistical tests to identify non-uniform variables and filter noise (logical) |
+| `UniformTestStat` | Statistical test for non-uniform variable selection (default: ) `"ks"` |
+| `UniformThreshold` | Threshold for non-uniform variable selection (default: 0.1) |
 
+
+### Variable Selection Methods
+The package offers two complementary variable selection approaches:
+#### PCA-based Selection (`PCAimportance = TRUE`)
+- Identifies variables with high loadings in principal components
+- Focuses on variables that capture the most variance in the data
+- Useful for dimensionality reduction while preserving data structure
+
+#### Non-uniform Selection (`NonNoiseSelection = TRUE`)
+- Uses statistical tests to identify variables that deviate from uniform distributions
+- Filters out noise variables automatically
+- Configurable test statistics, thresholds, and reference methods
+- Particularly effective for datasets with many irrelevant or noisy features
+
+**Combined Usage**: When both methods are enabled, the function first tries their intersection, then their union if intersection is empty, ensuring meaningful variables are always selected.
 
 ### Memory Optimization
 The package automatically optimizes memory usage through intelligent chunking:
@@ -105,17 +122,18 @@ The package automatically optimizes memory usage through intelligent chunking:
 
 ### Available `TestStat` options
 
-| Value     | Description                                                                                  |
-|-----------|----------------------------------------------------------------------------------------------|
-| `"ad"`    | Anderson–Darling statistic                                                                   |
-| `"kuiper"`| Kuiper statistic                                                                              |
-| `"cvm"`   | Cramér–von Mises statistic                                                                    |
-| `"wass"`  | Wasserstein distance                                                                          |
-| `"dts"`   | Distributional Transform Statistic                                                            |
-| `"ks"`    | Kolmogorov–Smirnov statistic                                                                  |
-| `"kld"`   | Kullback–Leibler divergence (via `KullbLeiblKLD2()`)                                          |
-| `"amrdd"` | Average Mean Root of Distributional Differences (via `amrdd()`)                               |
-| `"euc"`   | Euclidean distance (via `EucDist()`)                                                          |
+| Value      | Description                                                            |
+|------------|------------------------------------------------------------------------|
+| `"ad"`     | Anderson–Darling statistic                                             |
+| `"kuiper"` | Kuiper statistic                                                       |
+| `"cvm"`    | Cramér–von Mises statistic                                             |
+| `"wass"`   | Wasserstein distance                                                   |
+| `"dts"`    | Distributional transform statistic                                     |
+| `"ks"`     | Kolmogorov–Smirnov statistic                                           |
+| `"kld"`    | Kullback–Leibler divergence (via `KullbLeiblKLD2()`)                   |
+| `"amrdd"`  | Average Mean Root of distributional differences (via `amrdd()`)        |
+| `"euc"`    | Euclidean distance (via `EucDist()`)                                   |
+| `"nent"`   | Absolute normalized entropy difference (via `abs_norm_entropy_diff()`) |
 
 
 ### Output

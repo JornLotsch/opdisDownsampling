@@ -40,6 +40,8 @@ CompDistrib <- function(vector1, vector2, TestStat) {
     kld = KullbLeiblKLD2(vector1, vector2)$KLD,
     amrdd = amrdd(vector1, vector2),
     euc = EucDist(vector1, vector2),
+    nent = abs_norm_entropy_diff(vector1, vector2),
+
     # If the specified test is not supported, return a large value
     stop("Unsupported test statistic: ", TestStat)
   )

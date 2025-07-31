@@ -29,3 +29,5 @@ Test_opdisDownsampling.R
 WithCpp.tar.xz
 *.code-workspace
 p_experiment*
+combi*
+*.csv
