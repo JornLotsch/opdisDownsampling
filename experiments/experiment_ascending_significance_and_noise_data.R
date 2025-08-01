@@ -43,13 +43,15 @@ num_variables <- 50          # Number of variables (features) per data type
 significance_threshold <- 0.05  # Statistical significance threshold for p-values
 downsampling_size <- 0.8     # Proportion of original data to retain (80%)
 nSamples <- 10               # Number of downsampling iterations to perform
-nTrials <- 100                # Number of optimization trials per downsampling iteration
+nTrials <- 100000                # Number of optimization trials per downsampling iteration
 TestStat = "ad"              # Statistical test for distribution comparison (Anderson-Darling)
-use_ABC_for_Pvalues = TRUE  # Calculate Tau only for relevant features
+use_ABC_for_Pvalues = TRUE   # Calculate Tau only for relevant features
+WorstSample = FALSE          # Test if results worsen when reversing the selection criterions
 
 # Default values for data splitting optimization options
 OptimizeBetween <- FALSE     # Whether to optimize between reduced and removed sets
 NonNoiseSelection <- FALSE   # Whether to use noise detection for variable pre-selection
+
 
 # ===============================================================================
 # MAIN EXPERIMENT FUNCTION
@@ -245,7 +247,7 @@ run_experiment <- function(OptimizeBetween, NonNoiseSelection) {
       TestStat = TestStat,
       PCAimportance = FALSE,
       NonNoiseSelection = NonNoiseSelection,
-      WorstSample = FALSE              
+      WorstSample = WorstSample              
     )
     # Return both reduced (kept) and removed data with class labels
     list(
