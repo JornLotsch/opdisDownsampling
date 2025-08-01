@@ -134,14 +134,18 @@ validate_matrices <- function(matrices, matrix_names) {
 #' @title Select best trial for OptimizeBetween mode
 #' @description Selects the best trial when optimizing between reduced and removed data
 #' @param AD_reduced_vs_removed_statMat Matrix of statistics comparing reduced vs removed data
+#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
+#'   the least similar subsample (default: FALSE).
 #' @return Integer. Index of the best trial
 #' @keywords internal
-select_best_trial_optimize_between <- function(AD_reduced_vs_removed_statMat) {
+select_best_trial_optimize_between <- function(AD_reduced_vs_removed_statMat, WorstSample = FALSE) {
+
   if (is.null(AD_reduced_vs_removed_statMat) || nrow(AD_reduced_vs_removed_statMat) == 0) {
     stop("opdisDownsampling: No data available for OptimizeBetween selection.")
   }
 
-  max_vals <- apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE)
+  max_vals <- apply(AD_reduced_vs_removed_statMat, 1, if (!WorstSample) max else min, na.rm = TRUE)
+
   if (all(is.infinite(max_vals))) {
     warning("opdisDownsampling: All values are infinite in reduced vs removed comparison.",
             call. = FALSE)
@@ -156,17 +160,28 @@ select_best_trial_optimize_between <- function(AD_reduced_vs_removed_statMat) {
 #' @param AD_reduced_statMat Matrix of statistics for reduced data vs original
 #' @param AD_removed_statMat Matrix of statistics for removed data vs original
 #' @param AD_reduced_vs_removed_statMat Matrix of statistics for reduced vs removed data
+#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
+#'   the least similar subsample (default: FALSE).
 #' @return Integer. Index of the best trial
 #' @keywords internal
 select_best_trial_threefold <- function(AD_reduced_statMat, AD_removed_statMat,
-                                        AD_reduced_vs_removed_statMat) {
+                                        AD_reduced_vs_removed_statMat, WorstSample = FALSE) {
+
+  # Input validity checks
+  matrices <- list(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+  matrix_names <- c("AD_reduced_statMat", "AD_removed_statMat", "AD_reduced_vs_removed_statMat")
+
+  for (i in seq_along(matrices)) {
+    if (is.null(matrices[[i]]) || nrow(matrices[[i]]) == 0) {
+      stop(paste0("opdisDownsampling: No data available for threefold selection in ", matrix_names[i], "."))
+    }
+  }
+
   # Calculate ranks for all three matrices
-  R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE),
-                               ties.method = "first")
-  R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE),
-                               ties.method = "first")
-  R_AD_reduced_vs_removed_statMat <- rank(apply(AD_reduced_vs_removed_statMat, 1, max, na.rm = TRUE),
-                                          ties.method = "first")
+  rank_results <- lapply(matrices, function(mat) rank(apply(mat, 1, if (!WorstSample) max else min, na.rm = TRUE), ties.method = "first"))
+  R_AD_reduced_statMat <- rank_results[[1]]
+  R_AD_removed_statMat <- rank_results[[2]]
+  R_AD_reduced_vs_removed_statMat <- rank_results[[3]]
 
   # Combine ranks
   R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat, R_AD_reduced_vs_removed_statMat)
@@ -184,14 +199,26 @@ select_best_trial_threefold <- function(AD_reduced_statMat, AD_removed_statMat,
 #' @description Selects the best trial considering both reduced and removed data vs original
 #' @param AD_reduced_statMat Matrix of statistics for reduced data vs original
 #' @param AD_removed_statMat Matrix of statistics for removed data vs original
+#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
+#'   the least similar subsample (default: FALSE).
 #' @return Integer. Index of the best trial
 #' @keywords internal
-select_best_trial_check_removed <- function(AD_reduced_statMat, AD_removed_statMat) {
+select_best_trial_check_removed <- function(AD_reduced_statMat, AD_removed_statMat, WorstSample = FALSE) {
+
+  # Input validity checks
+  matrices <- list(AD_reduced_statMat, AD_removed_statMat)
+  matrix_names <- c("AD_reduced_statMat", "AD_removed_statMat")
+
+  for (i in seq_along(matrices)) {
+    if (is.null(matrices[[i]]) || nrow(matrices[[i]]) == 0) {
+      stop(paste0("opdisDownsampling: No data available for check removed selection in ", matrix_names[i], "."))
+    }
+  }
+
   # Calculate ranks for both matrices
-  R_AD_reduced_statMat <- rank(apply(AD_reduced_statMat, 1, max, na.rm = TRUE),
-                               ties.method = "first")
-  R_AD_removed_statMat <- rank(apply(AD_removed_statMat, 1, max, na.rm = TRUE),
-                               ties.method = "first")
+  rank_results <- lapply(matrices, function(mat) rank(apply(mat, 1, if (!WorstSample) max else min, na.rm = TRUE), ties.method = "first"))
+  R_AD_reduced_statMat <- rank_results[[1]]
+  R_AD_removed_statMat <- rank_results[[2]]
 
   # Combine ranks
   R_AD_all_statMat <- cbind(R_AD_reduced_statMat, R_AD_removed_statMat)
@@ -208,14 +235,17 @@ select_best_trial_check_removed <- function(AD_reduced_statMat, AD_removed_statM
 #' @title Select best trial for reduced data only
 #' @description Selects the best trial considering only reduced data vs original
 #' @param AD_reduced_statMat Matrix of statistics for reduced data vs original
+#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
+#'   the least similar subsample (default: FALSE).
 #' @return Integer. Index of the best trial
 #' @keywords internal
-select_best_trial_reduced_only <- function(AD_reduced_statMat) {
+select_best_trial_reduced_only <- function(AD_reduced_statMat, WorstSample = FALSE) {
+
   if (is.null(AD_reduced_statMat) || nrow(AD_reduced_statMat) == 0) {
     stop("opdisDownsampling: No data available for reduced-only selection.")
   }
 
-  max_vals <- apply(AD_reduced_statMat, 1, max, na.rm = TRUE)
+  max_vals <- apply(AD_reduced_statMat, 1, if (!WorstSample) max else min, na.rm = TRUE)
   if (all(is.infinite(max_vals))) {
     warning("opdisDownsampling: All values are infinite in reduced matrix comparison.",
             call. = FALSE)

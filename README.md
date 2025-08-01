@@ -91,6 +91,7 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `NonNoiseSelection` | Use statistical tests to identify non-uniform variables and filter noise (logical) |
 | `UniformTestStat` | Statistical test for non-uniform variable selection (default: ) `"ks"` |
 | `UniformThreshold` | Threshold for non-uniform variable selection (default: 0.1) |
+| `WorstSample` | A logical value for testing purpose reversing the split ranking to obtain the least similar subsample (default: FALSE)  |
 
 
 ### Available `TestStat` options

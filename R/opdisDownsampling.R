@@ -34,6 +34,8 @@
 #'   "amrdd" (Average Mean Root of Distributional Differences), and "euc" (Euclidean distance).
 #'   Only used when NonNoiseSelection = TRUE (default: "ks").
 #' @param UniformThreshold Threshold value for non-uniform variable selection (default: 0.1).
+#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
+#'   the least similar subsample (default: FALSE).
 #'
 #' @return A list with the following elements:
 #'   - `ReducedData`: The downsampled dataset.
@@ -52,7 +54,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
                               CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
                               JobSize = 0, verbose = FALSE, NonNoiseSelection = FALSE,
-                              UniformTestStat = "ks", UniformThreshold = 0.05) {
+                              UniformTestStat = "ks", UniformThreshold = 0.05, WorstSample = FALSE) {
 
   # Set CheckThreefold to FALSE when CheckRemoved is FALSE
   if (!CheckRemoved) CheckThreefold <- FALSE
@@ -228,13 +230,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   # Find best subsample using refactored selection logic with error handling
   BestTrial <- tryCatch({
     if (OptimizeBetween) {
-      select_best_trial_optimize_between(AD_reduced_vs_removed_statMat)
+      select_best_trial_optimize_between(AD_reduced_vs_removed_statMat, WorstSample)
     } else if (CheckThreefold && CheckRemoved) {
-      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat,WorstSample)
     } else if (CheckRemoved) {
-      select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat)
+      select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat, WorstSample)
     } else {
-      select_best_trial_reduced_only(AD_reduced_statMat)
+      select_best_trial_reduced_only(AD_reduced_statMat, WorstSample)
     }
   }, error = function(e) {
     warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),

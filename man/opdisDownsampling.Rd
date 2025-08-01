@@ -10,7 +10,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE,
   OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE,
   NonNoiseSelection = FALSE, UniformTestStat = "ks",
-  UniformThreshold = 0.05)
+  UniformThreshold = 0.05, WorstSample = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
@@ -77,7 +77,10 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
       non-uniform. Higher values make the selection more stringent. Only used when
       \code{NonNoiseSelection = TRUE} (default: \code{0.1}).}
 
+ \item{WorstSample}{Logical; if \code{TRUE}, the optimization targets the least similar subsample.
+       For testing  purpose (default: FALSE).}
 }
+
 \value{
   Returns a list with the following elements:
   \item{ReducedData}{Down-sampled data set (as data frame or matrix) including only the selected instances.}

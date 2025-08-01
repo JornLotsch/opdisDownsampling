@@ -43,8 +43,9 @@ num_variables <- 50          # Number of variables (features) per data type
 significance_threshold <- 0.05  # Statistical significance threshold for p-values
 downsampling_size <- 0.8     # Proportion of original data to retain (80%)
 nSamples <- 10               # Number of downsampling iterations to perform
-nTrials <- 10             # Number of optimization trials per downsampling iteration
+nTrials <- 100                # Number of optimization trials per downsampling iteration
 TestStat = "ad"              # Statistical test for distribution comparison (Anderson-Darling)
+use_ABC_for_Pvalues = TRUE  # Calculate Tau only for relevant features
 
 # Default values for data splitting optimization options
 OptimizeBetween <- FALSE     # Whether to optimize between reduced and removed sets
@@ -237,13 +238,14 @@ run_experiment <- function(OptimizeBetween, NonNoiseSelection) {
       Data = data_df$Data,
       Cls = data_df$Cls,
       Size = downsampling_size,
-      Seed = i + (i - 1) * 1e6,                              # Ensure unique seeds
+      Seed = i + (i - 1) * 1e6,       
       nTrials = nTrials,
-      OptimizeBetween = OptimizeBetween,                      # Parameter under study
+      OptimizeBetween = OptimizeBetween,    
       MaxCores = min(nTrials, parallel::detectCores()-1),
       TestStat = TestStat,
       PCAimportance = FALSE,
-      NonNoiseSelection = NonNoiseSelection                   # Parameter under study
+      NonNoiseSelection = NonNoiseSelection,
+      WorstSample = FALSE              
     )
     # Return both reduced (kept) and removed data with class labels
     list(
@@ -480,14 +482,97 @@ run_experiment <- function(OptimizeBetween, NonNoiseSelection) {
   # CORRELATION ANALYSIS (Kendall's Tau)
   # ---------------------------------------------------------------------------
 
+  # Enhanced validation and error handling
+  if (length(pval_reduced_list) == 0 || length(pval_removed_list) == 0) {
+    stop("Empty p-value lists provided")
+  }
+
   # Extract p-values matrices for correlation analysis
   pval_reduced_matrix <- do.call(cbind, lapply(pval_reduced_list, `[[`, "p_values"))
   pval_removed_matrix <- do.call(cbind, lapply(pval_removed_list, `[[`, "p_values"))
 
-  # Compute Kendall's tau correlations between original and downsampled p-value rankings
-  tau_reduced <- apply(pval_reduced_matrix, 2, cor, y = pval_results$p_values, method = "kendall")
-  tau_removed <- apply(pval_removed_matrix, 2, cor, y = pval_results$p_values, method = "kendall")
-  tau_reduced_vs_removed <- mapply(cor, as.data.frame(pval_reduced_matrix), as.data.frame(pval_removed_matrix), MoreArgs = list(method = "kendall"))
+  # Validate matrices
+  if (!is.numeric(pval_reduced_matrix) || !is.numeric(pval_removed_matrix)) {
+    stop("Non-numeric p-values detected")
+  }
+  if (any(is.na(pval_reduced_matrix)) || any(is.na(pval_removed_matrix))) {
+    warning("NA values detected in p-value matrices")
+  }
+
+  # Original p-values
+  pval_orig <- pval_results$p_values
+  if (is.null(pval_orig) || !is.numeric(pval_orig)) {
+    stop("Invalid original p-values")
+  }
+
+  # Filter features for the originally relevant features
+  if (use_ABC_for_Pvalues) {
+    
+    tryCatch({
+      feature_indices_orig_AB <- ABCanalysis::ABCanalysis(-log10(pval_orig))$Cind
+    }, error = function(e) {
+      stop(paste("ABCanalysis failed:", e$message))
+    })
+
+    if (length(feature_indices_orig_AB) == 0) {
+      warning("No features selected by ABCanalysis - skipping filtering")
+    } else {
+      if (any(feature_indices_orig_AB > nrow(pval_orig)) || any(feature_indices_orig_AB < 1)) {
+        stop("Invalid feature indices detected")
+      }
+
+      # Check remaining dimensions after filtering
+      remaining_features <- length(pval_orig) - length(feature_indices_orig_AB)
+      if (remaining_features <= 1) {
+        stop("Too few features remaining after ABC filtering")
+      }
+
+      # Keep matrix structure for correlation analysis
+      if (is.matrix(pval_orig)) {
+        pval_orig <- pval_orig[-feature_indices_orig_AB, , drop = FALSE]
+      } else {
+        pval_orig <- pval_orig[-feature_indices_orig_AB]
+      }
+      pval_removed_matrix <- pval_removed_matrix[-feature_indices_orig_AB, , drop = FALSE]
+      pval_reduced_matrix <- pval_reduced_matrix[-feature_indices_orig_AB, , drop = FALSE]
+    }
+  }
+
+  # Ensure pval_orig is a vector for correlation analysis
+  pval_orig <- as.vector(pval_orig)
+
+  # Compute Kendall's tau correlations with error handling
+  tau_reduced <- tryCatch({
+    apply(pval_reduced_matrix, 2, function(x) {
+      cor(x, pval_orig, method = "kendall", use = "complete.obs")
+    })
+  }, error = function(e) {
+    warning(paste("Error computing tau_reduced:", e$message))
+    rep(NA, ncol(pval_reduced_matrix))
+  })
+
+  tau_removed <- tryCatch({
+    apply(pval_removed_matrix, 2, function(x) {
+      cor(x, pval_orig, method = "kendall", use = "complete.obs")
+    })
+  }, error = function(e) {
+    warning(paste("Error computing tau_removed:", e$message))
+    rep(NA, ncol(pval_removed_matrix))
+  })
+
+  tau_reduced_vs_removed <- tryCatch({
+    mapply(function(x, y) {
+      cor(x, y, method = "kendall", use = "complete.obs")
+    }, as.data.frame(pval_reduced_matrix), as.data.frame(pval_removed_matrix))
+  }, error = function(e) {
+    warning(paste("Error computing tau_reduced_vs_removed:", e$message))
+    rep(NA, ncol(pval_reduced_matrix))
+  })
+
+  # Validate correlation results
+  if (all(is.na(tau_reduced)) || all(is.na(tau_removed)) || all(is.na(tau_reduced_vs_removed))) {
+    warning("All correlations are NA - check data quality")
+  }
 
   # Prepare data for plotting correlations
   correlation_data <- rbind(
@@ -495,7 +580,7 @@ run_experiment <- function(OptimizeBetween, NonNoiseSelection) {
     data.frame(Iteration = seq_along(tau_removed), Tau = tau_removed, Comparison = "Removed vs Original"),
     data.frame(Iteration = seq_along(tau_reduced_vs_removed), Tau = tau_reduced_vs_removed, Comparison = "Reduced vs Removed")
   )
-
+  
   # Calculate summary statistics for annotations
   median_tau_reduced <- median(tau_reduced)
   median_tau_removed <- median(tau_removed)
