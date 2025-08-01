@@ -155,7 +155,7 @@ run_experiment <- function(OptimizeBetween, NonNoiseSelection) {
         x = "Variable Number",
         y = "-log10(p-value)",
         title = paste0("Statistical Significance Comparison: Original vs ", length(reduced_pvals_list), " Downsampling Iterations"),
-        subtitle = paste("Based on", format(nTrials, scientific = FALSE), "trials per iteration;",", OptimizeBetween =", OptimizeBetween, ", NonNoiseSelection =", NonNoiseSelection),
+        subtitle = paste0("Based on", format(nTrials, scientific = FALSE), "trials per iteration; ","OptimizeBetween =", OptimizeBetween, ", NonNoiseSelection =", NonNoiseSelection),
         color = "Dataset Type"
       ) +
       guides(shape = "none")
