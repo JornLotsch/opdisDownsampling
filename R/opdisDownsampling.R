@@ -18,6 +18,8 @@
 #'   relevant variables.
 #' @param CheckRemoved A logical value indicating whether to also optimize the removed part
 #'   of the data for distribution equality with the original.
+#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part
+#'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
 #' @param OptimizeBetween A logical value indicating whether to optimize the reduced part
 #'   of the data for distribution equality with the removed part. If set, all other comparisons are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
@@ -48,13 +50,18 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, OptimizeBetween = FALSE,
+                              CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
                               JobSize = 0, verbose = FALSE, NonNoiseSelection = FALSE,
                               UniformTestStat = "ks", UniformThreshold = 0.05) {
 
+  # Set CheckThreefold to FALSE when CheckRemoved is FALSE
+  if (!CheckRemoved) CheckThreefold <- FALSE
 
-  # Set CheckRemoved to FALSE when OptimizeBetween is TRUE
-  if (OptimizeBetween) CheckRemoved <- FALSE
+  # Set CheckThreefold and CheckRemoved to FALSE when OptimizeBetween is TRUE
+  if (OptimizeBetween) {
+    CheckRemoved <- FALSE
+    CheckThreefold <- FALSE
+  }
 
   # Create empty data frame
   dfx <- data.frame(Data)
@@ -102,7 +109,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   }
 
   # Handle test statistic
-  TestStats <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "kld", "amrdd", "euc")
+  TestStats <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "kld", "amrdd", "euc", "nent")
   if (!(TestStat %in% TestStats)) {
     warning(paste0("opdisDownsampling: Possible TestStat = ", paste(TestStats, collapse = ", "),
                    ". TestStat set to default = 'ad'."), call. = FALSE)
@@ -156,6 +163,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
                                     UniformThreshold = UniformThreshold,
                                     nProc = nProc,
                                     CheckRemoved = CheckRemoved,
+                                    CheckThreefold = CheckThreefold,
                                     OptimizeBetween = OptimizeBetween,
                                     JobSize = JobSize)
 
@@ -221,6 +229,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   BestTrial <- tryCatch({
     if (OptimizeBetween) {
       select_best_trial_optimize_between(AD_reduced_vs_removed_statMat)
+    } else if (CheckThreefold && CheckRemoved) {
+      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
     } else if (CheckRemoved) {
       select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat)
     } else {

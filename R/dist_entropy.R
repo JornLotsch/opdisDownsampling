@@ -40,7 +40,7 @@ abs_norm_entropy_diff <- function(vector1, vector2, bins_method = "FD", min_bins
     }
     H <- -sum(p * log(p))
     n <- length(p)
-    H_max <- if (n > 1) log(n) else 1  # Avoid division by zero
+    H_max <- if (n > 1) log(n) else 1 # Avoid division by zero
     H_norm <- H / H_max
     return(H_norm)
   }

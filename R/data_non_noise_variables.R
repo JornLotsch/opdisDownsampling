@@ -18,7 +18,7 @@ simple_noise_detection <- function(var_data, test_stat = "ks", alpha = 0.05, see
   var_data <- var_data[!is.na(var_data)]
 
   if (length(var_data) < 21) {
-    return(FALSE)  # Insufficient data - treat as signal
+    return(FALSE) # Insufficient data - treat as signal
   }
 
   # Get range
@@ -27,7 +27,7 @@ simple_noise_detection <- function(var_data, test_stat = "ks", alpha = 0.05, see
 
   # Check for constant variable
   if (min_val == max_val) {
-    return(FALSE)  # Constant variable - treat as signal
+    return(FALSE) # Constant variable - treat as signal
   }
 
   tryCatch({
@@ -40,12 +40,12 @@ simple_noise_detection <- function(var_data, test_stat = "ks", alpha = 0.05, see
       lb_test <- Box.test(var_data, lag = min(10, length(var_data) - 1), type = "Ljung-Box")
       independence_p <- lb_test$p.value
     } else {
-      independence_p <- 1.0  # Assume independent for very small samples
+      independence_p <- 1.0 # Assume independent for very small samples
     }
 
     # Variable is noise if it looks uniform AND shows no autocorrelation
     # Use a more lenient threshold for uniformity (twice the alpha)
-    uniformity_pass <- uniformity_p >= (alpha * 2)  # More lenient
+    uniformity_pass <- uniformity_p >= (alpha * 2) # More lenient
     independence_pass <- independence_p > alpha
 
     # Both tests must suggest noise
@@ -54,7 +54,7 @@ simple_noise_detection <- function(var_data, test_stat = "ks", alpha = 0.05, see
     return(is_noise)
 
   }, error = function(e) {
-    return(FALSE)  # Treat errors as signal variables
+    return(FALSE) # Treat errors as signal variables
   })
 }
 

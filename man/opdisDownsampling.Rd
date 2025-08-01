@@ -7,7 +7,7 @@
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  PCAimportance = FALSE, CheckRemoved = FALSE,
+  PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE,
   OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE,
   NonNoiseSelection = FALSE, UniformTestStat = "ks",
   UniformThreshold = 0.05)
@@ -35,10 +35,10 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
      \item{\code{"dts"}: Distributional Transform Statistic}
      \item{\code{"ks"}: Kolmogorov–Smirnov statistic}
      \item{\code{"kld"}: Kullback–Leibler divergence (via \code{KullbLeiblKLD2()})}
-     \item{\code{"amrdd"}: Average mean root of distributional differences (via \code{amrdd()})}
+     \item{\code{"amrdd"}: Average Mean Root of Distributional Differences (via \code{amrdd()})}
      \item{\code{"euc"}: Euclidean distance (via \code{EucDist()})}
-     \item{\code{"nent"}: Absolute normalized entropy difference (via \code{abs_norm_entropy_diff()})}
-   }
+     \item{\code{"nent"}: Absolute normalized entropy difference (via \code{abs_norm_entropy_diff()})}   
+     }
  }
 
  \item{MaxCores}{Maximum number of CPU cores to use for parallel computing (default is value stored in \code{getOption("mc.cores")}, or 2 if missing).}
@@ -47,6 +47,9 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
 
  \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases,
       which can be used for data splits into training/test and validation.}
+
+ \item{CheckThreefold}{Logical; if \code{TRUE}, the optimization also includes the equal distribution of
+      the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
 
  \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation.
       If set, all other comparisons are not performed.}
