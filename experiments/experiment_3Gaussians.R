@@ -313,4 +313,5 @@ experiment_3Gaussians_results <-
 
 names(experiment_3Gaussians_results) <- paste0("OptimizeBetween", list_of_OptimizeBetween)
 
+# Save all 
 save.image(file = "experiment_3Gaussians.RData")
