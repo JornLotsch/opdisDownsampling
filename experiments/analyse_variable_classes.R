@@ -1,5 +1,5 @@
 # ===============================================================================
-# IMPROVED KENDALL'S TAU CORRELATION ANALYSIS FOR P-VALUES
+# KENDALL'S TAU CORRELATION ANALYSIS FOR P-VALUES
 # ===============================================================================
 
 # Load required libraries
@@ -9,16 +9,49 @@ library(ggthemes)
 library(reshape2)
 library(cowplot)
 
+# Attempt to set working directory to script location (for RStudio)
+tryCatch({
+  if (requireNamespace("rstudioapi", quietly = TRUE) &&
+      rstudioapi::isAvailable("getSourceEditorContext")) {
+    script_path <- rstudioapi::getSourceEditorContext()$path
+    if (!is.null(script_path) && nzchar(script_path)) {
+      setwd(dirname(script_path))
+      cat("Working directory set to script location:", getwd(), "\n")
+    }
+  }
+}, error = function(e) {
+  message("Unable to set working directory automatically: ", e$message)
+})
+
+# Change directory if it exists and is different from current
+if (dir.exists(EXPERIMENTS_DIR)) {
+  tryCatch({
+    setwd(EXPERIMENTS_DIR)
+    cat("Working directory changed to:", getwd(), "\n")
+  }, error = function(e) {
+    warning("Failed to change to experiments directory: ", e$message)
+    cat("Continuing with current directory:", getwd(), "\n")
+  })
+} else if (!dir.exists(EXPERIMENTS_DIR)) {
+  warning("Experiments directory does not exist: ", EXPERIMENTS_DIR)
+  cat("Continuing with current directory:", getwd(), "\n")
+}
+
+# Verify current working directory
+cat("Current working directory:", getwd(), "\n")
+
 # ===============================================================================
-# DATA EXTRACTION AND PREPARATION (IMPROVED)
+# DATA EXTRACTION AND PREPARATION
 # ===============================================================================
 
 # Extract p-values for 1-trial experiment
-pvals_orig <- results_experiment_ascending_significance_1Trial$p_values_orig$p_values
+pval_orig <- results_experiment_ascending_significance_1Trial$p_values_orig$p_values
+
 pvals_reduced_1Trial <- do.call(cbind.data.frame, lapply(results_experiment_ascending_significance_1Trial$pval_reduced_list, function(x) x$p_values))
 pvals_removed_1Trial <- do.call(cbind.data.frame, lapply(results_experiment_ascending_significance_1Trial$pval_removed_list, function(x) x$p_values))
 
-# Improved function for extracting p-values from n-trials experiment
+
+# Function for extracting p-values from n-trials experiment
 extract_pval_reduced_list_to_df <- function(pval_reduced_list) {
   if (is.null(pval_reduced_list) || length(pval_reduced_list) == 0) {
     return(NULL)
@@ -65,28 +98,71 @@ pvals_removed_nTrials <- pvals_removed_nTrials[!sapply(pvals_removed_nTrials, is
 # Create variable class labels
 var_class <- gsub("[^A-Za-z]", "", names(actual_data))[gsub("[^A-Za-z]", "", names(actual_data)) != gsub("[^A-Za-z]", "", actual_class)]
 
+# Remove C type features 
+# Identify significant features for original data using p-values
+if (use_ABC_for_feature_selection && requireNamespace("ABCanalysis", quietly = TRUE)) {
+  # Use ABCanalysis for feature selection based on -log10 transformed p-values
+  feature_indices_orig_C <- safe_test_execution(
+    function() ABCanalysis::ABCanalysis(-log10(pmax(pval_orig, 1e-100)))$Aind,
+    "ABCanalysis for raw p-values",
+    which(pval_orig < significance_threshold)
+  )
+
+  if (length(feature_indices_orig_C) == 0) {
+    cat("No features selected by ABCanalysis - using all features\n")
+  } else {
+    # Validate indices
+    valid_indices <- feature_indices_orig_C[feature_indices_orig_C <= length(pval_orig) &
+                                              feature_indices_orig_C >= 1]
+
+    if (length(valid_indices) < length(feature_indices_orig_C)) {
+      warning("Some invalid feature indices detected, filtering them out")
+      feature_indices_orig_C <- valid_indices
+    }
+
+    # Check remaining dimensions after filtering
+    remaining_features <- length(pval_orig) - length(feature_indices_orig_C)
+    if (remaining_features <= 1) {
+      cat("Too few features remaining after ABC filtering - using all features\n")
+    } else {
+      # Apply filtering
+      pval_orig <- pval_orig[-feature_indices_orig_C]
+      pvals_reduced_1Trial <- pvals_reduced_1Trial[-feature_indices_orig_C,, drop = FALSE]
+      pvals_removed_1Trial <- pvals_removed_1Trial[-feature_indices_orig_C,, drop = FALSE]
+
+      pvals_reduced_nTrials <- lapply(pvals_reduced_nTrials, function(pvals_reduced_nTrials) pvals_reduced_nTrials[-feature_indices_orig_C,, drop = FALSE])
+      pvals_removed_nTrials <- lapply(pvals_removed_nTrials, function(pvals_removed_nTrials) pvals_removed_nTrials[-feature_indices_orig_C,, drop = FALSE])
+
+      var_class <- var_class[-feature_indices_orig_C]
+
+      cat(paste("ABC filtering removed", length(feature_indices_orig_C), "features\n"))
+    }
+  }
+}
+
+
 # ===============================================================================
 # KENDALL'S TAU CALCULATION FUNCTIONS
 # ===============================================================================
 
 #' Calculate Kendall's tau correlation between original and downsampled p-values by variable class
-#' @param pvals_orig Original p-values vector
+#' @param pval_orig Original p-values vector
 #' @param pvals_downsampled Data frame of downsampled p-values
 #' @param var_class Variable class labels
 #' @param dataset_name Name for the dataset (e.g., "Reduced", "Removed")
 #' @return Data frame with Kendall's tau values by variable class
-calculate_kendall_by_class <- function(pvals_orig, pvals_downsampled, var_class, dataset_name) {
+calculate_kendall_by_class <- function(pval_orig, pvals_downsampled, var_class, dataset_name) {
   if (is.null(pvals_downsampled) || ncol(pvals_downsampled) == 0) {
     return(NULL)
   }
 
   # Combine data for analysis
-  df_combined <- cbind.data.frame(pvals_orig = pvals_orig, pvals_downsampled, var_class = var_class)
+  df_combined <- cbind.data.frame(pval_orig = pval_orig, pvals_downsampled, var_class = var_class)
 
   # Calculate Kendall's tau by variable class
   kendall_results <- df_combined %>%
     group_by(var_class) %>%
-    summarise(across(all_of(names(pvals_downsampled)), ~ cor(pvals_orig, ., method = "kendall", use = "complete.obs")),
+    summarise(across(all_of(names(pvals_downsampled)), ~ cor(pval_orig, ., method = "kendall", use = "complete.obs")),
               .groups = "drop")
 
   kendall_results$DataSet <- dataset_name
@@ -98,8 +174,8 @@ calculate_kendall_by_class <- function(pvals_orig, pvals_downsampled, var_class,
 # ===============================================================================
 
 # Calculate Kendall's tau for 1-trial experiment
-kendall_reduced_1Trial <- calculate_kendall_by_class(pvals_orig, pvals_reduced_1Trial, var_class, "Reduced")
-kendall_removed_1Trial <- calculate_kendall_by_class(pvals_orig, pvals_removed_1Trial, var_class, "Removed")
+kendall_reduced_1Trial <- calculate_kendall_by_class(pval_orig, pvals_reduced_1Trial, var_class, "Reduced")
+kendall_removed_1Trial <- calculate_kendall_by_class(pval_orig, pvals_removed_1Trial, var_class, "Removed")
 
 # Combine 1-trial results
 kendall_by_class_1Trial <- rbind.data.frame(kendall_reduced_1Trial, kendall_removed_1Trial)
@@ -112,7 +188,7 @@ kendall_by_class_1Trial$SingleMultiple <- "Single"
 
 # Calculate Kendall's tau for n-trials experiment - Reduced
 kendall_reduced_nTrials <- lapply(names(pvals_reduced_nTrials), function(param_name) {
-  result <- calculate_kendall_by_class(pvals_orig, pvals_reduced_nTrials[[param_name]], var_class, "Reduced")
+  result <- calculate_kendall_by_class(pval_orig, pvals_reduced_nTrials[[param_name]], var_class, "Reduced")
   if (!is.null(result)) {
     result$Parameters <- param_name
   }
@@ -122,7 +198,7 @@ kendall_reduced_nTrials <- do.call(rbind, kendall_reduced_nTrials[!sapply(kendal
 
 # Calculate Kendall's tau for n-trials experiment - Removed
 kendall_removed_nTrials <- lapply(names(pvals_removed_nTrials), function(param_name) {
-  result <- calculate_kendall_by_class(pvals_orig, pvals_removed_nTrials[[param_name]], var_class, "Removed")
+  result <- calculate_kendall_by_class(pval_orig, pvals_removed_nTrials[[param_name]], var_class, "Removed")
   if (!is.null(result)) {
     result$Parameters <- param_name
   }
@@ -374,7 +450,8 @@ cat("\nKendall's Tau correlation analysis completed successfully.\n")
 # Save the plot
 output_filename <- paste0("Tau_by_variable_class_",
                           format(nTrials, scientific = FALSE), "trials_",
-                          nSamples, "iterations_", downsampling_size, "sampled.svg")
+                          nSamples, "iterations_", downsampling_size, "sampled",
+                          "_ABC_for_feature_selection", use_ABC_for_feature_selection, ".svg")
 
 ggsave(output_filename, p_combined, width = 14, height = 14)
 cat(sprintf("Tau_by_variable_class plot saved as %s", output_filename))
