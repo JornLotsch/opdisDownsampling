@@ -401,7 +401,8 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
   cat(paste("Class distribution:", paste(table(data_list$Cls), collapse = ", "), "\n"))
 
   # Print current parameter combination for tracking progress
-  cat(paste0("Parameters: CheckRemoved = ", CheckRemoved,
+  cat(paste0("Parameters: nTrials = ", nTrials,
+            ", CheckRemoved = ", CheckRemoved,
             ", CheckThreefold = ", CheckThreefold,
             ", OptimizeBetween = ", OptimizeBetween,
             ", NonNoiseSelection = ", NonNoiseSelection, "\n"))
