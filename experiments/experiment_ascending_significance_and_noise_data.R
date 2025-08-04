@@ -14,7 +14,7 @@ random_seed <- 42 # Random seed for reproducibility
 significance_threshold <- 0.05 # Statistical significance threshold for p-values
 downsampling_size <- 0.8 # Proportion of original data to retain (80%)
 nSamples <- 10 # Number of downsampling iterations to perform
-nTrials <- 100000 # Number of optimization trials per downsampling iteration
+nTrials <- 10 # Number of optimization trials per downsampling iteration
 TestStat <- "ad" # Statistical test for distribution comparison (Anderson-Darling)
 
 # opdisDownsampling-specific parameters
@@ -27,7 +27,7 @@ PCAimportance <- FALSE # Whether to use PCA to identify relevant variables
 
 # Analysis and visualization parameters
 use_ABC_for_Pvalues <- TRUE # Calculate Tau only for relevant features
-use_ABC_for_feature_selection <- TRUE # Whether to regard only the A subset features for the Jaccard Index
+use_ABC_for_feature_selection <- TRUE # Whether to regard only the A subset features for the Jaccard index
 
 # Default values for data splitting optimization options
 CheckRemoved <- FALSE # Whether to optimize for reduced AND removed sets
@@ -264,436 +264,6 @@ if (exists("results_experiment_ascending_significance_nTrials")) {
               length(results_experiment_ascending_significance_nTrials)))
 }
 
-# Print summary of results
-if (exists("results_experiment_ascending_significance_1Trial")) {
-  cat("Single trial results available in: results_experiment_ascending_significance_1Trial\n")
-}
-if (exists("results_experiment_ascending_significance_nTrials")) {
-  cat(sprintf("Multiple trial results available in: results_experiment_ascending_significance_nTrials (%d combinations)\n",
-              length(results_experiment_ascending_significance_nTrials)))
-}
-
-
-# ===============================================================================
-# POST-PROCESSING AND COMPARATIVE ANALYSIS
-# ===============================================================================
-
-#' Extract and process correlation data from experiment results
-#' @param results_single Single trial results (optional)
-#' @param results_multiple Multiple trial results (optional) 
-#' @param default_param_name Default parameter combination name for single trial
-#' @return Combined correlation data frame with parameter information
-extract_correlation_data <- function(results_single = NULL, results_multiple = NULL,
-                                     default_param_name = "OpF_NoF") {
-
-  combined_correlations <- data.frame()
-
-  # Process single trial results if available
-  if (!is.null(results_single) && !is.null(results_single$correlations)) {
-    single_correlations <- results_single$correlations
-    single_correlations$ParameterCombination <- default_param_name
-    single_correlations$SingleMultiple <- "Single"
-    combined_correlations <- rbind(combined_correlations, single_correlations)
-
-    if (exists("cat")) {
-      cat("Extracted correlation data from single trial experiment\n")
-    }
-  }
-
-  # Process multiple trial results if available
-  if (!is.null(results_multiple) && is.list(results_multiple)) {
-    multiple_correlations <- do.call(rbind, lapply(names(results_multiple), function(param_name) {
-      if (!is.null(results_multiple[[param_name]]$correlations)) {
-        correlations_df <- results_multiple[[param_name]]$correlations
-        correlations_df$ParameterCombination <- param_name
-        return(correlations_df)
-      }
-      return(NULL)
-    }))
-
-    if (!is.null(multiple_correlations)) {
-      rownames(multiple_correlations) <- NULL
-      multiple_correlations$SingleMultiple <- "Multiple"
-      combined_correlations <- rbind(combined_correlations, multiple_correlations)
-
-      if (exists("cat")) {
-        cat(sprintf("Extracted correlation data from %d parameter combinations\n",
-                    length(unique(multiple_correlations$ParameterCombination))))
-      }
-    }
-  }
-
-  # Parse parameter combinations into separate columns if data exists
-  if (nrow(combined_correlations) > 0) {
-    combined_correlations <- combined_correlations %>%
-      separate(ParameterCombination,
-               into = c("OptimizeBetween", "NonNoiseSelection"),
-               sep = "_",
-               remove = FALSE) %>%
-      mutate(
-        OptimizeBetween = gsub("OB", "", OptimizeBetween),
-        NonNoiseSelection = gsub("NNS", "", NonNoiseSelection)
-      )
-  }
-
-  return(combined_correlations)
-}
-
-#' Extract and process Jaccard index data from experiment results
-#' @param results_single Single trial results (optional)
-#' @param results_multiple Multiple trial results (optional)
-#' @param default_param_name Default parameter combination name for single trial
-#' @return Combined Jaccard data frame with parameter information
-extract_jaccard_data <- function(results_single = NULL, results_multiple = NULL,
-                                 default_param_name = "OpF_NoF") {
-
-  combined_jaccard <- data.frame()
-
-  # Process single trial results if available
-  if (!is.null(results_single) && !is.null(results_single$jaccard_indices)) {
-    single_jaccard <- results_single$jaccard_indices
-    single_jaccard$ParameterCombination <- default_param_name
-    single_jaccard$SingleMultiple <- "Single"
-    combined_jaccard <- rbind(combined_jaccard, single_jaccard)
-
-    if (exists("cat")) {
-      cat("Extracted Jaccard data from single trial experiment\n")
-    }
-  }
-
-  # Process multiple trial results if available
-  if (!is.null(results_multiple) && is.list(results_multiple)) {
-    multiple_jaccard <- do.call(rbind, lapply(names(results_multiple), function(param_name) {
-      if (!is.null(results_multiple[[param_name]]$jaccard_indices)) {
-        jaccard_df <- results_multiple[[param_name]]$jaccard_indices
-        jaccard_df$ParameterCombination <- param_name
-        return(jaccard_df)
-      }
-      return(NULL)
-    }))
-
-    if (!is.null(multiple_jaccard)) {
-      rownames(multiple_jaccard) <- NULL
-      multiple_jaccard$SingleMultiple <- "Multiple"
-      combined_jaccard <- rbind(combined_jaccard, multiple_jaccard)
-
-      if (exists("cat")) {
-        cat(sprintf("Extracted Jaccard data from %d parameter combinations\n",
-                    length(unique(multiple_jaccard$ParameterCombination))))
-      }
-    }
-  }
-
-  # Parse parameter combinations into separate columns if data exists
-  if (nrow(combined_jaccard) > 0) {
-    combined_jaccard <- combined_jaccard %>%
-      separate(ParameterCombination,
-               into = c("OptimizeBetween", "NonNoiseSelection"),
-               sep = "_",
-               remove = FALSE) %>%
-      mutate(
-        OptimizeBetween = gsub("OB", "", OptimizeBetween),
-        NonNoiseSelection = gsub("NNS", "", NonNoiseSelection)
-      )
-  }
-
-  return(combined_jaccard)
-}
-
-#' Create correlation comparison visualization with statistical annotations
-#' @param correlation_data Data frame with correlation results
-#' @param plot_title Title for the plot
-#' @param plot_subtitle Subtitle for the plot
-#' @param facet_by_param Whether to create facets by parameter combination
-#' @param add_annotations Whether to add statistical annotations (Med, Var, Min, Mode)
-#' @return ggplot object
-create_correlation_plot <- function(correlation_data, plot_title = "Correlation Analysis",
-                                    plot_subtitle = "", facet_by_param = TRUE,
-                                    add_annotations = TRUE) {
-
-  if (nrow(correlation_data) == 0) {
-    return(ggplot() +
-             theme_void() +
-             labs(title = "No correlation data available"))
-  }
-
-  # Calculate mode function
-  calculate_mode <- function(x) {
-    ux <- unique(x)
-    ux[which.max(tabulate(match(x, ux)))]
-  }
-
-  # Base plot
-  p <- ggplot(data = correlation_data, aes(x = Comparison, y = Tau)) +
-    geom_boxplot(aes(color = Comparison), position = "dodge", alpha = 0.5,
-                 fill = "cornsilk", show.legend = FALSE) +
-    geom_point(aes(shape = as.factor(Iteration), color = Comparison),
-               position = position_jitter(width = 0.05), alpha = 1) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "salmon") +
-    geom_hline(yintercept = 1, linetype = "dashed", color = "chartreuse3") +
-    scale_color_colorblind() +
-    scale_shape_manual(values = 0:19) +
-    theme_light() +
-    theme(
-      legend.position = "bottom",
-      legend.background = element_rect(fill = alpha("white", 0.5)),
-      strip.background = element_rect(fill = "cornsilk"),
-      strip.text = element_text(colour = "black"),
-      panel.grid.minor = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      plot.subtitle = element_text(size = 9)
-    ) +
-    labs(
-      x = "Comparison",
-      y = "Kendall's Tau",
-      title = plot_title,
-      subtitle = plot_subtitle,
-      shape = "Iteration"
-    )
-
-  # Add annotations if requested
-  if (add_annotations) {
-    # Calculate statistics for each comparison type AND parameter combination
-    stats_by_comparison <- correlation_data %>%
-      group_by(Comparison, ParameterCombination) %>%
-      summarise(
-        median_val = median(Tau, na.rm = TRUE),
-        variance_val = var(Tau, na.rm = TRUE),
-        min_val = min(Tau, na.rm = TRUE),
-        mode_val = calculate_mode(Tau),
-        .groups = "drop"
-      )
-
-    # Get unique comparisons in the order they appear in the plot
-    unique_comparisons <- levels(factor(correlation_data$Comparison))
-    if (is.null(unique_comparisons)) {
-      unique_comparisons <- unique(correlation_data$Comparison)
-    }
-
-    # Create annotation data frame - 2x2 matrix arrangement for each comparison and parameter combination
-    annotation_df <- data.frame()
-
-    for (i in seq_along(unique_comparisons)) {
-      comp <- unique_comparisons[i]
-
-      # Get stats for this comparison across all parameter combinations
-      comp_stats <- stats_by_comparison[stats_by_comparison$Comparison == comp,]
-
-      if (nrow(comp_stats) > 0) {
-        # Create annotations for this comparison for EACH parameter combination
-        for (j in 1:nrow(comp_stats)) {
-          param_combo <- comp_stats$ParameterCombination[j]
-          stats <- comp_stats[j,]
-
-          comp_annotations <- data.frame(
-            Comparison = rep(comp, 4),
-            ParameterCombination = rep(param_combo, 4), # Include parameter combination
-            x = c(i - 0.1, i + 0.1, i - 0.1, i + 0.1), # Side by side positioning
-            y = c(1.5, 1.5, 1.15, 1.15), # Two rows
-            color_group = rep(comp, 4),
-            label = c(
-              paste("Med:", round(stats$median_val, 3)),
-              paste("Var:", round(stats$variance_val, 3)),
-              paste("Min:", round(stats$min_val, 3)),
-              paste("Mode:", round(stats$mode_val, 3))
-            )
-          )
-          annotation_df <- rbind(annotation_df, comp_annotations)
-        }
-      }
-    }
-
-    # Add annotations to plot
-    if (nrow(annotation_df) > 0) {
-      p <- p + geom_text(
-        data = annotation_df,
-        aes(x = x, y = y, label = label, color = color_group),
-        inherit.aes = FALSE,
-        hjust = 1, vjust = 0.5, size = 2.5, angle = 90, fontface = "plain"
-      )
-    }
-  }
-
-  # Add faceting if requested and multiple parameter combinations exist
-  if (facet_by_param && length(unique(correlation_data$ParameterCombination)) > 1) {
-    p <- p + facet_wrap(. ~ ParameterCombination, nrow = 1) +
-      guides(shape = guide_legend(nrow = 1), color = "none")
-  } else {
-    p <- p + guides(color = "none", shape = "none")
-  }
-
-  # Fix the y-axis scaling issue
-  if (add_annotations) {
-    p <- p + scale_y_continuous(
-      limits = c(floor(min(correlation_data$Tau, na.rm = TRUE) * 4) / 4, 1.55), # Extended upper limit for annotations
-      breaks = seq(from = floor(min(correlation_data$Tau, na.rm = TRUE) * 4) / 4,
-                   to = 1, by = 0.25)
-    )
-  } else {
-    p <- p + scale_y_continuous(
-      limits = c(min(correlation_data$Tau, na.rm = TRUE), 1), # Normal limits
-      breaks = c(-0.25, 0, 0.25, 0.5, 0.75, 1)
-    )
-  }
-
-  return(p)
-}
-
-#' Create Jaccard index comparison visualization with statistical annotations
-#' @param jaccard_data Data frame with Jaccard index results
-#' @param plot_title Title for the plot
-#' @param plot_subtitle Subtitle for the plot
-#' @param facet_by_param Whether to create facets by parameter combination
-#' @param add_annotations Whether to add statistical annotations (Med, Var, Min, Mode)
-#' @return ggplot object
-create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard Index Analysis",
-                                plot_subtitle = "", facet_by_param = TRUE,
-                                add_annotations = TRUE) {
-
-  if (nrow(jaccard_data) == 0) {
-    return(ggplot() +
-             theme_void() +
-             labs(title = "No Jaccard data available"))
-  }
-
-  # Calculate mode function
-  calculate_mode <- function(x) {
-    ux <- unique(x)
-    ux[which.max(tabulate(match(x, ux)))]
-  }
-
-  # Reshape data for visualization
-  jaccard_long <- reshape2::melt(jaccard_data,
-                                 id.vars = c("Iteration", "Comparison", "ParameterCombination",
-                                             "OptimizeBetween", "NonNoiseSelection"),
-                                 measure.vars = c("Jaccard_Raw", "Jaccard_FDR"),
-                                 variable.name = "Correction_Type",
-                                 value.name = "Jaccard_Index")
-
-  # Clean up labels for better readability
-  jaccard_long$Correction_Type <- ifelse(jaccard_long$Correction_Type == "Jaccard_Raw",
-                                         "Raw p-values", "FDR corrected")
-
-  # Ensure proper factor ordering for consistent colors
-  jaccard_long$Comparison <- factor(jaccard_long$Comparison,
-                                    levels = c("Reduced vs Original", "Removed vs Original",
-                                               "Reduced vs Removed"))
-
-  # Create base plot
-  p <- ggplot(jaccard_long, aes(x = Comparison, y = Jaccard_Index, color = Comparison)) +
-    geom_boxplot(position = "dodge", alpha = 0.3, fill = "cornsilk",
-                 outlier.shape = NA, size = 0.3) +
-    geom_point(aes(shape = as.factor(Iteration)),
-               position = position_jitter(width = 0.1), alpha = 0.7, size = 0.8) +
-    geom_hline(yintercept = 1, linetype = "dashed", color = "chartreuse3", size = 0.5) +
-    geom_hline(yintercept = 0.5, linetype = "dotted", color = "orange", size = 0.3) +
-    geom_hline(yintercept = 0, linetype = "solid", color = "red", size = 0.3, alpha = 0.5) +
-    scale_color_colorblind() +
-    scale_shape_manual(values = 0:19) +
-    theme_light() +
-    theme(
-      legend.position = "bottom",
-      strip.background = element_rect(fill = "cornsilk"),
-      strip.text = element_text(colour = "black", size = 9, face = "bold"),
-      panel.grid.minor = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-      axis.title = element_text(size = 10),
-      plot.title = element_text(size = 11),
-      strip.text.y = element_text(angle = 90),
-      plot.subtitle = element_text(size = 9)
-    ) +
-    labs(
-      x = "Comparison",
-      y = "Jaccard Index",
-      title = plot_title,
-      subtitle = plot_subtitle
-    ) +
-    guides(shape = "none", color = "none")
-
-  # Add annotations if requested
-  if (add_annotations) {
-    # Calculate statistics for each comparison type, correction type, AND parameter combination
-    stats_by_group <- jaccard_long %>%
-      group_by(Comparison, Correction_Type, ParameterCombination) %>%
-      summarise(
-        median_val = median(Jaccard_Index, na.rm = TRUE),
-        variance_val = var(Jaccard_Index, na.rm = TRUE),
-        min_val = min(Jaccard_Index, na.rm = TRUE),
-        mode_val = calculate_mode(Jaccard_Index),
-        .groups = "drop"
-      )
-
-    # Get unique comparisons in the order they appear in the plot
-    unique_comparisons <- levels(jaccard_long$Comparison)
-    if (is.null(unique_comparisons)) {
-      unique_comparisons <- unique(jaccard_long$Comparison)
-    }
-
-    # Create annotation data frame for each comparison, correction type, and parameter combination
-    annotation_df <- data.frame()
-
-    for (i in seq_along(unique_comparisons)) {
-      comp <- unique_comparisons[i]
-
-      # Get stats for this comparison across correction types and parameter combinations
-      comp_stats <- stats_by_group[stats_by_group$Comparison == comp,]
-
-      if (nrow(comp_stats) > 0) {
-        # Create annotations for this comparison for EACH correction type and parameter combination
-        for (j in 1:nrow(comp_stats)) {
-          correction_type <- comp_stats$Correction_Type[j]
-          param_combo <- comp_stats$ParameterCombination[j]
-          stats <- comp_stats[j,]
-
-          comp_annotations <- data.frame(
-            Comparison = rep(comp, 4),
-            Correction_Type = rep(correction_type, 4),
-            ParameterCombination = rep(param_combo, 4), # Include parameter combination
-            x = c(i - 0.1, i + 0.1, i - 0.1, i + 0.1), # Side by side positioning
-            y = c(1.5, 1.5, 1.15, 1.15), # Two rows
-            color_group = rep(comp, 4),
-            label = c(
-              paste("Med:", round(stats$median_val, 3)),
-              paste("Var:", round(stats$variance_val, 3)),
-              paste("Min:", round(stats$min_val, 3)),
-              paste("Mode:", round(stats$mode_val, 3))
-            )
-          )
-          annotation_df <- rbind(annotation_df, comp_annotations)
-        }
-      }
-    }
-
-    # Add annotations to plot
-    if (nrow(annotation_df) > 0) {
-      p <- p + geom_text(
-        data = annotation_df,
-        aes(x = x, y = y, label = label, color = color_group),
-        inherit.aes = FALSE,
-        hjust = 1, vjust = 0.5, size = 2.2, angle = 90, fontface = "plain"
-      )
-    }
-
-    # Adjust y-axis limits to accommodate annotations
-    p <- p + scale_y_continuous(limits = c(0, 1.55), breaks = seq(0, 1, 0.25))
-  } else {
-    # Original y-axis limits without annotations
-    p <- p + scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25))
-  }
-
-  # Add faceting if requested and data supports it
-  if (facet_by_param) {
-    if (length(unique(jaccard_long$ParameterCombination)) > 1) {
-      p <- p + facet_grid(Correction_Type ~ ParameterCombination, scales = "free_x") +
-        labs(caption = "Rows show p-value correction type; Columns show parameter combinations")
-    } else {
-      # Single parameter combination - just facet by correction type
-      p <- p + facet_wrap(Correction_Type ~ ., ncol = 1, strip.position = "right")
-    }
-  }
-
-  return(p)
-}
 
 # ---------------------------------------------------------------------------
 # MAIN POST-PROCESSING EXECUTION
@@ -722,6 +292,12 @@ all_correlations <- extract_correlation_data(
 
 # Extract and combine all Jaccard data
 all_jaccard_data <- extract_jaccard_data(
+  results_single = single_trial_results,
+  results_multiple = multiple_trial_results
+)
+
+# Extract and combine all simple matching coefficient data
+all_simple_matching_coefficient_data <- extract_simple_matching_coefficient_data(
   results_single = single_trial_results,
   results_multiple = multiple_trial_results
 )
@@ -778,7 +354,7 @@ if (has_single_trial && has_multiple_trials) {
 
   p_single_trial_jaccard <- create_jaccard_plot(
     single_jaccard,
-    plot_title = "Single Trial",
+    plot_title = "Single trial",
     plot_subtitle = paste0("1 trial per iteration,\n", nSamples, " iterations"),
     facet_by_param = TRUE,
     add_annotations = add_annotations
@@ -786,45 +362,82 @@ if (has_single_trial && has_multiple_trials) {
 
   p_multiple_jaccard <- create_jaccard_plot(
     multiple_jaccard,
-    plot_title = "Feature Selection Overlap by P-value Correction Method",
+    plot_title = "Feature selection overlap by p-value correction method",
     plot_subtitle = paste("Analysis with", format(nTrials, scientific = FALSE), "trials per iteration,", nSamples, "iterations"),
     facet_by_param = TRUE,
     add_annotations = add_annotations
   )
 
 } else if (nrow(all_jaccard_data) > 0) {
-  # Create single comprehensive plot
+  # Create single combined plot
   p_all_jaccard <- create_jaccard_plot(
     all_jaccard_data,
-    plot_title = "Jaccard Index Analysis Results",
+    plot_title = "Jaccard index analysis results",
     plot_subtitle = paste("Analysis with", format(nTrials, scientific = FALSE), "trials per iteration,", nSamples, "iterations"),
     facet_by_param = has_multiple_params,
     add_annotations = add_annotations
   )
 }
 
-# Combine plots for comprehensive visualization
+# Create simple matching coefficient plots
+if (has_single_trial && has_multiple_trials) {
+  # Create separate plots for single and multiple trials
+  single_simple_matching_coefficient <- all_simple_matching_coefficient_data[all_simple_matching_coefficient_data$SingleMultiple == "Single",]
+  multiple_simple_matching_coefficient <- all_simple_matching_coefficient_data[all_simple_matching_coefficient_data$SingleMultiple == "Multiple",]
+  
+  p_single_trial_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
+    single_simple_matching_coefficient,
+    plot_title = "Single trial",
+    plot_subtitle = paste0("1 trial per iteration,\n", nSamples, " iterations"),
+    facet_by_param = TRUE,
+    add_annotations = add_annotations
+  )
+  
+  p_multiple_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
+    multiple_simple_matching_coefficient,
+    plot_title = "Feature selection overlap by p-value correction method",
+    plot_subtitle = paste("Analysis with", format(nTrials, scientific = FALSE), "trials per iteration,", nSamples, "iterations"),
+    facet_by_param = TRUE,
+    add_annotations = add_annotations
+  )
+  
+} else if (nrow(all_simple_matching_coefficient_data) > 0) {
+  # Create single combined plot
+  p_all_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
+    all_simple_matching_coefficient_data,
+    plot_title = "Simple matching coefficient analysis results",
+    plot_subtitle = paste("Analysis with", format(nTrials, scientific = FALSE), "trials per iteration,", nSamples, "iterations"),
+    facet_by_param = has_multiple_params,
+    add_annotations = add_annotations
+  )
+}
+
+# Combine plots for overview
 if (exists("p_single_trial_correlations") && exists("p_multiple_correlations") &&
-    exists("p_single_trial_jaccard") && exists("p_multiple_jaccard")) {
+    exists("p_single_trial_jaccard") && exists("p_multiple_jaccard" ) &&
+    exists("p_single_trial_simple_matching_coefficient") && exists("p_multiple_simple_matching_coefficient")) {
 
   p_combined_analysis <- cowplot::plot_grid(
     p_single_trial_correlations,
     p_multiple_correlations,
     p_single_trial_jaccard,
     p_multiple_jaccard,
+    p_single_trial_simple_matching_coefficient,
+    p_multiple_simple_matching_coefficient,
     labels = "AUTO",
-    nrow = 2,
+    nrow = 3,
     rel_widths = c(1, 4),
     align = "hv", axis = "tb"
   )
 
-} else if (exists("p_all_correlations") && exists("p_all_jaccard")) {
+} else if (exists("p_all_correlations") && exists("p_all_jaccard") && exists("p_all_simple_matching_coefficient")) {
 
   p_combined_analysis <- cowplot::plot_grid(
     p_all_correlations,
     p_all_jaccard,
-    labels = c("A", "B"),
-    nrow = 2,
+    p_all_simple_matching_coefficient,
+    labels = "AUTO",
+    nrow = 3,
     align = "hv", axis = "tb"
   )
 }
@@ -854,7 +467,7 @@ if (exists("p_combined_analysis")) {
                             format(nTrials, scientific = FALSE), "trials_",
                             nSamples, "iterations_", downsampling_size, "sampled.svg")
 
-  ggsave(output_filename, p_combined_analysis, width = plot_width, height = 18)
+  ggsave(output_filename, p_combined_analysis, width = plot_width, height = 25)
   cat(sprintf("Combined analysis plot saved as: %s (width: %.1f inches, %d param combinations)\n",
               output_filename, plot_width, n_param_combinations))
 }
