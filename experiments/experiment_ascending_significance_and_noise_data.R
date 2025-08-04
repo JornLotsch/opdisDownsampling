@@ -14,7 +14,7 @@ random_seed <- 42 # Random seed for reproducibility
 significance_threshold <- 0.05 # Statistical significance threshold for p-values
 downsampling_size <- 0.8 # Proportion of original data to retain (80%)
 nSamples <- 10 # Number of downsampling iterations to perform
-nTrials <- 10 # Number of optimization trials per downsampling iteration
+nTrials <- 10000 # Number of optimization trials per downsampling iteration
 TestStat <- "ad" # Statistical test for distribution comparison (Anderson-Darling)
 
 # opdisDownsampling-specific parameters
@@ -150,7 +150,8 @@ create_full_param_list <- function(param_row, all_defaults) {
 }
 
 # Generate the synthetic data
-ascending_significance_and_noise_data <- generate_custom_biomedical_data(n_normal = 40, n_uniform = 40)
+# ascending_significance_and_noise_data <- generate_custom_biomedical_data(n_normal = 40, n_uniform = 40)
+ascending_significance_and_noise_data <- generate_biomedical_synthetic_data(num_variables = 15)
 
 # Generic name for data
 actual_data <- ascending_significance_and_noise_data
@@ -160,6 +161,10 @@ actual_class <- "Cls"
 cat("Plotting p-values from t-tests...\n")
 p_values <- apply(actual_data[, -1], 2, function(x) t.test(x ~ actual_data$Cls)$p.value)
 plot(-log10(p_values), main = "-log10(p-values) from t-tests by variable", ylab = "p-value", xlab = "Variable index")
+# par(mfrow=c(2,1))
+# barplot(-log10(p_values), main = "-log10(p-values) from t-tests by variable", ylab = "p-value", xlab = "Variable index", las = 2)
+# par(mfrow=c(1,1))
+
 
 # Determine trial configurations to run
 if (nTrials != 1) {
@@ -384,7 +389,7 @@ if (has_single_trial && has_multiple_trials) {
   # Create separate plots for single and multiple trials
   single_simple_matching_coefficient <- all_simple_matching_coefficient_data[all_simple_matching_coefficient_data$SingleMultiple == "Single",]
   multiple_simple_matching_coefficient <- all_simple_matching_coefficient_data[all_simple_matching_coefficient_data$SingleMultiple == "Multiple",]
-  
+
   p_single_trial_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
     single_simple_matching_coefficient,
     plot_title = "Single trial",
@@ -392,7 +397,7 @@ if (has_single_trial && has_multiple_trials) {
     facet_by_param = TRUE,
     add_annotations = add_annotations
   )
-  
+
   p_multiple_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
     multiple_simple_matching_coefficient,
     plot_title = "Feature selection overlap by p-value correction method",
@@ -400,7 +405,7 @@ if (has_single_trial && has_multiple_trials) {
     facet_by_param = TRUE,
     add_annotations = add_annotations
   )
-  
+
 } else if (nrow(all_simple_matching_coefficient_data) > 0) {
   # Create single combined plot
   p_all_simple_matching_coefficient <- create_simple_matching_coefficient_plot(
@@ -414,7 +419,7 @@ if (has_single_trial && has_multiple_trials) {
 
 # Combine plots for overview
 if (exists("p_single_trial_correlations") && exists("p_multiple_correlations") &&
-    exists("p_single_trial_jaccard") && exists("p_multiple_jaccard" ) &&
+    exists("p_single_trial_jaccard") && exists("p_multiple_jaccard") &&
     exists("p_single_trial_simple_matching_coefficient") && exists("p_multiple_simple_matching_coefficient")) {
 
   p_combined_analysis <- cowplot::plot_grid(
@@ -455,7 +460,7 @@ if (exists("p_combined_analysis")) {
   }
 
   # Calculate width: base width + extra width per additional column
-  base_width <- 10 # Width for single parameter combination
+  base_width <- 12 # Width for single parameter combination
   width_per_column <- 5 # Additional width per extra parameter combination
   plot_width <- base_width + (n_param_combinations - 1) * width_per_column
 

@@ -295,7 +295,7 @@ generate_binomial_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CL
                                               seed = DEFAULT_RANDOM_SEED,
                                               n_trials = 10,
                                               class1_prob_range = c(0.3, 0.7),
-                                              class2_prob_range = c(0.3, 0.65)) {
+                                              class2_prob_range = c(0.3, 0.6)) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
     stop("n_samples and n_vars must be positive integers")
@@ -366,7 +366,7 @@ generate_poisson_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLA
                                              n_vars = DEFAULT_NUM_VARIABLES,
                                              seed = DEFAULT_RANDOM_SEED,
                                              class1_lambda_range = c(2, 20),
-                                             class2_lambda_range = c(2, 18)) {
+                                             class2_lambda_range = c(2, 19)) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
     stop("n_samples and n_vars must be positive integers")
@@ -432,7 +432,7 @@ generate_exponential_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER
                                                  n_vars = DEFAULT_NUM_VARIABLES,
                                                  seed = DEFAULT_RANDOM_SEED,
                                                  class1_rate_range = c(0.5, 2),
-                                                 class2_rate_range = c(0.5, 1.8)) {
+                                                 class2_rate_range = c(0.5, 1.6)) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
     stop("n_samples and n_vars must be positive integers")
@@ -499,7 +499,7 @@ generate_gamma_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLASS
                                            n_vars = DEFAULT_NUM_VARIABLES,
                                            seed = DEFAULT_RANDOM_SEED,
                                            class1_shape_range = c(1, 5),
-                                           class2_shape_range = c(1, 4.5),
+                                           class2_shape_range = c(1, 4),
                                            rate = 1) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
@@ -572,7 +572,7 @@ generate_beta_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLASS,
                                           n_vars = DEFAULT_NUM_VARIABLES,
                                           seed = DEFAULT_RANDOM_SEED,
                                           class1_shape1_range = c(1, 5),
-                                          class2_shape1_range = c(1, 4.5),
+                                          class2_shape1_range = c(1, 4),
                                           shape2 = 2) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
@@ -645,7 +645,7 @@ generate_chisq_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLASS
                                            n_vars = DEFAULT_NUM_VARIABLES,
                                            seed = DEFAULT_RANDOM_SEED,
                                            class1_df_range = c(1, 10),
-                                           class2_df_range = c(1, 9)) {
+                                           class2_df_range = c(1, 8)) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {
     stop("n_samples and n_vars must be positive integers")
@@ -711,8 +711,8 @@ generate_chisq_noise_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLASS,
 generate_weibull_class_diff_data <- function(n_samples = DEFAULT_SAMPLES_PER_CLASS,
                                              n_vars = DEFAULT_NUM_VARIABLES,
                                              seed = DEFAULT_RANDOM_SEED,
-                                             class1_shape_range = c(1, 3),
-                                             class2_shape_range = c(1, 2.8),
+                                             class1_shape_range = c(1, 20),
+                                             class2_shape_range = c(1, 2),
                                              scale = 1) {
   # Input validation
   if (n_samples <= 0 || n_vars <= 0) {

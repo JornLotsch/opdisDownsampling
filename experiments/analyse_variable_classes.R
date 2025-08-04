@@ -210,6 +210,63 @@ kendall_removed_nTrials <- do.call(rbind, kendall_removed_nTrials[!sapply(kendal
 kendall_by_class_nTrials <- rbind.data.frame(kendall_reduced_nTrials, kendall_removed_nTrials)
 kendall_by_class_nTrials$SingleMultiple <- "Multiple"
 
+# Differences to 1 trial
+median_kendall_by_class_1Trial <- data.frame(Median = apply(kendall_by_class_1Trial[, grep("Iteration", names(kendall_by_class_1Trial))], 1, function(x) median(x)))
+median_kendall_by_class_1Trial$var_class <- kendall_by_class_1Trial$var_class
+median_kendall_by_class_1Trial$DataSet <- kendall_by_class_1Trial$DataSet
+median_kendall_by_class_1Trial$Parameters <- kendall_by_class_1Trial$Parameters
+
+median_kendall_by_class_nTrials <- data.frame(Median = apply(kendall_by_class_nTrials[, grep("Iteration", names(kendall_by_class_nTrials))], 1, function(x) median(x)))
+median_kendall_by_class_nTrials$var_class <- kendall_by_class_nTrials$var_class
+median_kendall_by_class_nTrials$DataSet <- kendall_by_class_nTrials$DataSet
+median_kendall_by_class_nTrials$Parameters <- kendall_by_class_nTrials$Parameters
+
+merged_df <- merge(
+  median_kendall_by_class_nTrials,
+  median_kendall_by_class_1Trial,
+  by = c("var_class", "DataSet", "Parameters"),
+  all.x = TRUE
+)
+library(dplyr)
+library(tidyr)
+
+merged_df <- merged_df %>%
+  tidyr::fill(Median.y, .direction = "down")
+
+merged_df$MedianDiff <- merged_df$Median.x - merged_df$Median.y
+
+# Calculate median per DataSet and Parameters (panel grouping)
+median_lines <- merged_df %>%
+# filter(!grepl("Noise", var_class)) %>%   # exclude var_class containing "Noise"
+group_by(DataSet, Parameters) %>%
+  summarise(MedianPanel = median(MedianDiff, na.rm = TRUE), .groups = "drop")
+
+# Main plot
+ggplot(merged_df, aes(x = var_class, y = MedianDiff, fill = DataSet)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.8),
+           color = "black",
+           width = 0.7
+  ) +
+# Add horizontal median lines
+geom_hline(data = median_lines,
+             aes(yintercept = MedianPanel, color = DataSet),
+             linetype = "dashed",
+             size = 1
+  ) +
+  facet_wrap(~Parameters) +
+  scale_fill_colorblind() +
+  scale_color_colorblind() +
+  labs(title = "MedianDiff by var_class and DataSet (with panel medians)",
+       y = "MedianDiff",
+       x = "Variable Class") +
+  theme_light() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 30, hjust = 1)
+  ) +
+  common_theme
+
 # ===============================================================================
 # COMBINE ALL RESULTS
 # ===============================================================================
@@ -453,5 +510,5 @@ output_filename <- paste0("Tau_by_variable_class_",
                           nSamples, "iterations_", downsampling_size, "sampled",
                           "_ABC_for_feature_selection", use_ABC_for_feature_selection, ".svg")
 
-ggsave(output_filename, p_combined, width = 14, height = 14)
+ggsave(output_filename, p_combined, width = 40, height = 14)
 cat(sprintf("Tau_by_variable_class plot saved as %s", output_filename))

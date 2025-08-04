@@ -903,7 +903,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       labs(
         x = "Comparison",
         y = "Jaccard index",
-        title = "Feature selection overlap"
+        title = "Feature overlap"
       ) +
       guides(shape = "none")
   }
@@ -949,45 +949,45 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
   cat("• Medium Jaccard (0.3-0.7): Moderate overlap\n")
   cat("• Low Jaccard (<0.3): Weak overlap\n")
 
-  
+
   # ---------------------------------------------------------------------------
   # SIMPLE MATCHING COEFFICIENT ANALYSIS (Feature Selection Overlap)
   # ---------------------------------------------------------------------------
-  
+
   # Simple Matching Coefficient function in R
   # vec1, vec2: vectors of equal length, values can be "yes"/"no" or 1/0
-  
+
   simple_matching_coefficient <- function(vec1, vec2) {
     # Check inputs are the same length
-    if(length(vec1) != length(vec2)) stop("Vectors must be of equal length")
-    
+    if (length(vec1) != length(vec2)) stop("Vectors must be of equal length")
+
     # Convert to binary (1 for "yes", 0 for "no") if needed
     # Skip this conversion if already using 1 and 0
-    if(is.character(vec1)) vec1 <- as.integer(tolower(vec1) == "yes")
-    if(is.character(vec2)) vec2 <- as.integer(tolower(vec2) == "yes")
-    
+    if (is.character(vec1)) vec1 <- as.integer(tolower(vec1) == "yes")
+    if (is.character(vec2)) vec2 <- as.integer(tolower(vec2) == "yes")
+
     # Calculate number of matches
     matches <- sum(vec1 == vec2)
-    
+
     # Calculate SMC as proportion of matches
     smc <- matches / length(vec1)
     return(smc)
   }
-  
-  
+
+
   # P-value calculation with simple matching coefficient analysis
   # Compares feature selection overlap between: Original-Reduced, Original-Removed, Reduced-Removed
   calculate_pvals_with_simple_matching_coefficient_threefold <- function(pval_results, pval_reduced_list, pval_removed_list,
                                                                          significance_threshold = 0.05) {
-    
+
     # Apply FDR correction for multiple testing
     fdr_adjusted_pvals <- p.adjust(pval_results$p_values, method = "fdr")
-    
+
     cat("Calculating simple matching coefficient indices for feature selection overlap...\n")
-    
+
     # Create vector of zeros for simple matching coefficient
     simple_matching_coefficient_zeros <- rep(0, length(pval_results$Variable_No))
-    
+
     # Identify significant features for original data using both raw and FDR-corrected p-values
     if (!use_ABC_for_feature_selection || !requireNamespace("ABCanalysis", quietly = TRUE)) {
       original_significant_raw <- which(pval_results$p_values < significance_threshold)
@@ -1005,7 +1005,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       )
       original_significant_raw_01 <- simple_matching_coefficient_zeros
       original_significant_raw_01[original_significant_raw] <- 1
-      
+
       original_significant_fdr <- safe_test_execution(
         function() ABCanalysis::ABCanalysis(-log10(pmax(fdr_adjusted_pvals, 1e-100)))$Aind,
         "ABCanalysis for FDR-corrected p-values",
@@ -1014,7 +1014,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       original_significant_fdr_01 <- simple_matching_coefficient_zeros
       original_significant_fdr_01[original_significant_raw] <- 1
     }
-    
+
     # Initialize results data frame for all three comparison types
     simple_matching_coefficient_results <- data.frame(
       Iteration = integer(),
@@ -1023,7 +1023,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       simple_matching_coefficient_FDR = numeric(),
       stringsAsFactors = FALSE
     )
-    
+
     # Process each downsampling iteration
     for (i in seq_along(pval_reduced_list)) {
       # Get significant features for this iteration (both reduced and removed sets)
@@ -1035,7 +1035,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         reduced_significant_fdr <- which(reduced_fdr_adjusted < significance_threshold)
         reduced_significant_fdr_01 <- simple_matching_coefficient_zeros
         reduced_significant_fdr_01[reduced_significant_fdr] <- 1
-        
+
         removed_significant_raw <- which(pval_removed_list[[i]]$p_values < significance_threshold)
         removed_significant_raw_01 <- simple_matching_coefficient_zeros
         removed_significant_raw_01[removed_significant_raw] <- 1
@@ -1051,7 +1051,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         )
         reduced_significant_raw_01 <- simple_matching_coefficient_zeros
         reduced_significant_raw_01[reduced_significant_raw] <- 1
-        
+
         reduced_fdr_adjusted <- p.adjust(pval_reduced_list[[i]]$p_values, method = "fdr")
         reduced_significant_fdr <- safe_test_execution(
           function() ABCanalysis::ABCanalysis(-log10(pmax(reduced_fdr_adjusted, 1e-100)))$Aind,
@@ -1060,7 +1060,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         )
         reduced_significant_fdr_01 <- simple_matching_coefficient_zeros
         reduced_significant_fdr_01[reduced_significant_fdr] <- 1
-        
+
         removed_significant_raw <- safe_test_execution(
           function() ABCanalysis::ABCanalysis(-log10(pmax(pval_removed_list[[i]]$p_values, 1e-100)))$Aind,
           paste("ABCanalysis for removed raw p-values (iteration", i, ")"),
@@ -1068,7 +1068,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         )
         removed_significant_raw_01 <- simple_matching_coefficient_zeros
         removed_significant_raw_01[removed_significant_raw] <- 1
-        
+
         removed_fdr_adjusted <- p.adjust(pval_removed_list[[i]]$p_values, method = "fdr")
         removed_significant_fdr <- safe_test_execution(
           function() ABCanalysis::ABCanalysis(-log10(pmax(removed_fdr_adjusted, 1e-100)))$Aind,
@@ -1078,7 +1078,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         removed_significant_fdr_01 <- simple_matching_coefficient_zeros
         removed_significant_fdr_01[removed_significant_fdr] <- 1
       }
-      
+
       # Calculate simple matching coefficient indices for all three comparisons
       simple_matching_coefficient_results <- rbind(simple_matching_coefficient_results, data.frame(
         Iteration = i,
@@ -1087,7 +1087,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         simple_matching_coefficient_FDR = simple_matching_coefficient(original_significant_fdr_01, reduced_significant_fdr_01),
         stringsAsFactors = FALSE
       ))
-      
+
       simple_matching_coefficient_results <- rbind(simple_matching_coefficient_results, data.frame(
         Iteration = i,
         Comparison = "Removed vs Original",
@@ -1095,7 +1095,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         simple_matching_coefficient_FDR = simple_matching_coefficient(original_significant_fdr_01, removed_significant_fdr_01),
         stringsAsFactors = FALSE
       ))
-      
+
       simple_matching_coefficient_results <- rbind(simple_matching_coefficient_results, data.frame(
         Iteration = i,
         Comparison = "Reduced vs Removed",
@@ -1104,7 +1104,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         stringsAsFactors = FALSE
       ))
     }
-    
+
     return(list(
       simple_matching_coefficient_results = simple_matching_coefficient_results,
       original_significant_raw_01 = original_significant_raw_01,
@@ -1112,7 +1112,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       fdr_adjusted_pvals = fdr_adjusted_pvals
     ))
   }
-  
+
   # Create simple matching coefficient panel for integration with comparison plot
   create_simple_matching_coefficient_panel <- function(simple_matching_coefficient_analysis) {
     # Prepare data for plotting - reshape from wide to long format
@@ -1120,15 +1120,15 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
                                                        id.vars = c("Iteration", "Comparison"),
                                                        variable.name = "Correction_Type",
                                                        value.name = "simple_matching_coefficient")
-    
+
     # Clean up labels for better readability
     simple_matching_coefficient_long$Correction_Type <- ifelse(simple_matching_coefficient_long$Correction_Type == "simple_matching_coefficient_Raw",
                                                                "Raw p-values", "FDR corrected")
-    
+
     # Ensure proper factor ordering for consistent colors across plots
     simple_matching_coefficient_long$Comparison <- factor(simple_matching_coefficient_long$Comparison,
                                                           levels = c("Reduced vs Original", "Removed vs Original", "Reduced vs Removed"))
-    
+
     # Create the panel with consistent styling
     plot_theme <- theme_light() +
       theme(
@@ -1140,7 +1140,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
         axis.title = element_text(size = 10),
         plot.title = element_text(size = 11)
       )
-    
+
     # Create simple matching coefficient visualization with reference lines
     ggplot(simple_matching_coefficient_long, aes(x = Comparison, y = simple_matching_coefficient, color = Comparison)) +
       geom_boxplot(position = "dodge", alpha = 0.5, fill = "cornsilk",
@@ -1157,23 +1157,23 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
       labs(
         x = "Comparison",
         y = "Simple matching coefficient",
-        title = "Feature selection overlap"
+        title = "Feature overlap"
       ) +
       guides(shape = "none")
   }
-  
+
   # Execute simple matching coefficient analysis workflow
   cat("Calculating simple matching coefficient indices for feature selection overlap...\n")
   simple_matching_coefficient_analysis <- calculate_pvals_with_simple_matching_coefficient_threefold(pval_results, pval_reduced_list, pval_removed_list,
                                                                                                      significance_threshold)
-  
+
   # Create the simple matching coefficient panel
   p_simple_matching_coefficient <- create_simple_matching_coefficient_panel(simple_matching_coefficient_analysis)
-  
+
   # Print summary statistics for Jaccard indices
   cat("\nSimple matching coefficient Summary:\n")
   cat("=================================\n")
-  
+
   # Calculate summary statistics for each comparison type
   summary_stats <- aggregate(cbind(simple_matching_coefficient_Raw, simple_matching_coefficient_FDR) ~ Comparison,
                              data = simple_matching_coefficient_analysis$simple_matching_coefficient_results,
@@ -1182,9 +1182,9 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
                                                  SD = round(sd(x, na.rm = TRUE), 3),
                                                  Min = round(min(x, na.rm = TRUE), 3),
                                                  Max = round(max(x, na.rm = TRUE), 3)))
-  
+
   print(summary_stats)
-  
+
   # Additional insights about feature selection
   cat("\nFeature Selection Insights:\n")
   cat("===========================\n")
@@ -1192,7 +1192,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
             length(simple_matching_coefficient_analysis$original_significant_raw), " out of ", nrow(pval_results), "\n", sep = ""))
   cat(paste("Original significant features (FDR corrected): ",
             length(simple_matching_coefficient_analysis$original_significant_fdr), " out of ", nrow(pval_results), "\n", sep = ""))
-  
+
   # Interpretation guidelines for users
   cat("\nInterpretation Guidelines:\n")
   cat("=========================\n")
@@ -1202,7 +1202,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
   cat("• High simple matching coefficient (>0.7): Strong overlap\n")
   cat("• Medium simple matching coefficient (0.3-0.7): Moderate overlap\n")
   cat("• Low simple matching coefficient (<0.3): Weak overlap\n")
-  
+
   # ---------------------------------------------------------------------------
   # CORRELATION ANALYSIS (Kendall's Tau)
   # ---------------------------------------------------------------------------
@@ -1399,8 +1399,8 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
   # ---------------------------------------------------------------------------
 
   # Combine and display all plots in a comprehensive layout
-  combined_plot <- cowplot::plot_grid(comparison_plot, 
-                                      p_kendall_correlations_box, 
+  combined_plot <- cowplot::plot_grid(comparison_plot,
+                                      p_kendall_correlations_box,
                                       p_jaccard,
                                       p_simple_matching_coefficient,
                                       labels = "AUTO", rel_widths = c(4, 1, 1, 1), nrow = 1)
@@ -1416,7 +1416,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
 
   # Save combined plot to file with error handling
   tryCatch({
-    ggsave(safe_filename, combined_plot, width = 12, height = 12)
+    ggsave(safe_filename, combined_plot, width = 16, height = 12)
     cat(paste("Plot saved as:", safe_filename, "\n"))
   }, error = function(e) {
     warning(paste("Failed to save plot:", e$message), call. = FALSE)
@@ -1455,7 +1455,7 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
     p_kendall_correlations_box = p_kendall_correlations_box,
     p_jaccard = p_jaccard,
     p_simple_matching_coefficient = p_simple_matching_coefficient,
-  
+
 
   # Analysis results
     jaccard_analysis = jaccard_analysis,
@@ -1498,21 +1498,21 @@ run_experiment <- function(data_df, class_name, CheckRemoved = FALSE, CheckThree
 #' @return Combined correlation data frame with parameter information
 extract_correlation_data <- function(results_single = NULL, results_multiple = NULL,
                                      default_param_name = "OpF_NoF") {
-  
+
   combined_correlations <- data.frame()
-  
+
   # Process single trial results if available
   if (!is.null(results_single) && !is.null(results_single$correlations)) {
     single_correlations <- results_single$correlations
     single_correlations$ParameterCombination <- default_param_name
     single_correlations$SingleMultiple <- "Single"
     combined_correlations <- rbind(combined_correlations, single_correlations)
-    
+
     if (exists("cat")) {
       cat("Extracted correlation data from single trial experiment\n")
     }
   }
-  
+
   # Process multiple trial results if available
   if (!is.null(results_multiple) && is.list(results_multiple)) {
     multiple_correlations <- do.call(rbind, lapply(names(results_multiple), function(param_name) {
@@ -1523,19 +1523,19 @@ extract_correlation_data <- function(results_single = NULL, results_multiple = N
       }
       return(NULL)
     }))
-    
+
     if (!is.null(multiple_correlations)) {
       rownames(multiple_correlations) <- NULL
       multiple_correlations$SingleMultiple <- "Multiple"
       combined_correlations <- rbind(combined_correlations, multiple_correlations)
-      
+
       if (exists("cat")) {
         cat(sprintf("Extracted correlation data from %d parameter combinations\n",
                     length(unique(multiple_correlations$ParameterCombination))))
       }
     }
   }
-  
+
   # Parse parameter combinations into separate columns if data exists
   if (nrow(combined_correlations) > 0) {
     combined_correlations <- combined_correlations %>%
@@ -1548,7 +1548,7 @@ extract_correlation_data <- function(results_single = NULL, results_multiple = N
         NonNoiseSelection = gsub("NNS", "", NonNoiseSelection)
       )
   }
-  
+
   return(combined_correlations)
 }
 
@@ -1559,21 +1559,21 @@ extract_correlation_data <- function(results_single = NULL, results_multiple = N
 #' @return Combined Jaccard data frame with parameter information
 extract_jaccard_data <- function(results_single = NULL, results_multiple = NULL,
                                  default_param_name = "OpF_NoF") {
-  
+
   combined_jaccard <- data.frame()
-  
+
   # Process single trial results if available
   if (!is.null(results_single) && !is.null(results_single$jaccard_indices)) {
     single_jaccard <- results_single$jaccard_indices
     single_jaccard$ParameterCombination <- default_param_name
     single_jaccard$SingleMultiple <- "Single"
     combined_jaccard <- rbind(combined_jaccard, single_jaccard)
-    
+
     if (exists("cat")) {
       cat("Extracted Jaccard data from single trial experiment\n")
     }
   }
-  
+
   # Process multiple trial results if available
   if (!is.null(results_multiple) && is.list(results_multiple)) {
     multiple_jaccard <- do.call(rbind, lapply(names(results_multiple), function(param_name) {
@@ -1584,19 +1584,19 @@ extract_jaccard_data <- function(results_single = NULL, results_multiple = NULL,
       }
       return(NULL)
     }))
-    
+
     if (!is.null(multiple_jaccard)) {
       rownames(multiple_jaccard) <- NULL
       multiple_jaccard$SingleMultiple <- "Multiple"
       combined_jaccard <- rbind(combined_jaccard, multiple_jaccard)
-      
+
       if (exists("cat")) {
         cat(sprintf("Extracted Jaccard data from %d parameter combinations\n",
                     length(unique(multiple_jaccard$ParameterCombination))))
       }
     }
   }
-  
+
   # Parse parameter combinations into separate columns if data exists
   if (nrow(combined_jaccard) > 0) {
     combined_jaccard <- combined_jaccard %>%
@@ -1609,7 +1609,7 @@ extract_jaccard_data <- function(results_single = NULL, results_multiple = NULL,
         NonNoiseSelection = gsub("NNS", "", NonNoiseSelection)
       )
   }
-  
+
   return(combined_jaccard)
 }
 
@@ -1620,21 +1620,21 @@ extract_jaccard_data <- function(results_single = NULL, results_multiple = NULL,
 #' @return Combined simple matching coefficient data frame with parameter information
 extract_simple_matching_coefficient_data <- function(results_single = NULL, results_multiple = NULL,
                                                      default_param_name = "OpF_NoF") {
-  
+
   combined_simple_matching_coefficient <- data.frame()
-  
+
   # Process single trial results if available
   if (!is.null(results_single) && !is.null(results_single$simple_matching_coefficients)) {
     single_simple_matching_coefficient <- results_single$simple_matching_coefficients
     single_simple_matching_coefficient$ParameterCombination <- default_param_name
     single_simple_matching_coefficient$SingleMultiple <- "Single"
     combined_simple_matching_coefficient <- rbind(combined_simple_matching_coefficient, single_simple_matching_coefficient)
-    
+
     if (exists("cat")) {
       cat("Extracted simple matching coefficient data from single trial experiment\n")
     }
   }
-  
+
   # Process multiple trial results if available
   if (!is.null(results_multiple) && is.list(results_multiple)) {
     multiple_simple_matching_coefficient <- do.call(rbind, lapply(names(results_multiple), function(param_name) {
@@ -1645,19 +1645,19 @@ extract_simple_matching_coefficient_data <- function(results_single = NULL, resu
       }
       return(NULL)
     }))
-    
+
     if (!is.null(multiple_simple_matching_coefficient)) {
       rownames(multiple_simple_matching_coefficient) <- NULL
       multiple_simple_matching_coefficient$SingleMultiple <- "Multiple"
       combined_simple_matching_coefficient <- rbind(combined_simple_matching_coefficient, multiple_simple_matching_coefficient)
-      
+
       if (exists("cat")) {
         cat(sprintf("Extracted simple matching coefficient data from %d parameter combinations\n",
                     length(unique(multiple_simple_matching_coefficient$ParameterCombination))))
       }
     }
   }
-  
+
   # Parse parameter combinations into separate columns if data exists
   if (nrow(combined_simple_matching_coefficient) > 0) {
     combined_simple_matching_coefficient <- combined_simple_matching_coefficient %>%
@@ -1670,7 +1670,7 @@ extract_simple_matching_coefficient_data <- function(results_single = NULL, resu
         NonNoiseSelection = gsub("NNS", "", NonNoiseSelection)
       )
   }
-  
+
   return(combined_simple_matching_coefficient)
 }
 
@@ -1684,19 +1684,19 @@ extract_simple_matching_coefficient_data <- function(results_single = NULL, resu
 create_correlation_plot <- function(correlation_data, plot_title = "Correlation Analysis",
                                     plot_subtitle = "", facet_by_param = TRUE,
                                     add_annotations = TRUE) {
-  
+
   if (nrow(correlation_data) == 0) {
     return(ggplot() +
              theme_void() +
              labs(title = "No correlation data available"))
   }
-  
+
   # Calculate mode function
   calculate_mode <- function(x) {
     ux <- unique(x)
     ux[which.max(tabulate(match(x, ux)))]
   }
-  
+
   # Base plot
   p <- ggplot(data = correlation_data, aes(x = Comparison, y = Tau)) +
     geom_boxplot(aes(color = Comparison), position = "dodge", alpha = 0.5,
@@ -1724,7 +1724,7 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
       subtitle = plot_subtitle,
       shape = "Iteration"
     )
-  
+
   # Add annotations if requested
   if (add_annotations) {
     # Calculate statistics for each comparison type AND parameter combination
@@ -1737,28 +1737,28 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
         mode_val = calculate_mode(Tau),
         .groups = "drop"
       )
-    
+
     # Get unique comparisons in the order they appear in the plot
     unique_comparisons <- levels(factor(correlation_data$Comparison))
     if (is.null(unique_comparisons)) {
       unique_comparisons <- unique(correlation_data$Comparison)
     }
-    
+
     # Create annotation data frame - 2x2 matrix arrangement for each comparison and parameter combination
     annotation_df <- data.frame()
-    
+
     for (i in seq_along(unique_comparisons)) {
       comp <- unique_comparisons[i]
-      
+
       # Get stats for this comparison across all parameter combinations
       comp_stats <- stats_by_comparison[stats_by_comparison$Comparison == comp,]
-      
+
       if (nrow(comp_stats) > 0) {
         # Create annotations for this comparison for EACH parameter combination
         for (j in 1:nrow(comp_stats)) {
           param_combo <- comp_stats$ParameterCombination[j]
           stats <- comp_stats[j,]
-          
+
           comp_annotations <- data.frame(
             Comparison = rep(comp, 4),
             ParameterCombination = rep(param_combo, 4), # Include parameter combination
@@ -1776,7 +1776,7 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
         }
       }
     }
-    
+
     # Add annotations to plot
     if (nrow(annotation_df) > 0) {
       p <- p + geom_text(
@@ -1787,7 +1787,7 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
       )
     }
   }
-  
+
   # Add faceting if requested and multiple parameter combinations exist
   if (facet_by_param && length(unique(correlation_data$ParameterCombination)) > 1) {
     p <- p + facet_wrap(. ~ ParameterCombination, nrow = 1) +
@@ -1795,7 +1795,7 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
   } else {
     p <- p + guides(color = "none", shape = "none")
   }
-  
+
   # Fix the y-axis scaling issue
   if (add_annotations) {
     p <- p + scale_y_continuous(
@@ -1809,7 +1809,7 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
       breaks = c(-0.25, 0, 0.25, 0.5, 0.75, 1)
     )
   }
-  
+
   return(p)
 }
 
@@ -1823,19 +1823,19 @@ create_correlation_plot <- function(correlation_data, plot_title = "Correlation 
 create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analysis",
                                 plot_subtitle = "", facet_by_param = TRUE,
                                 add_annotations = TRUE) {
-  
+
   if (nrow(jaccard_data) == 0) {
     return(ggplot() +
              theme_void() +
              labs(title = "No Jaccard data available"))
   }
-  
+
   # Calculate mode function
   calculate_mode <- function(x) {
     ux <- unique(x)
     ux[which.max(tabulate(match(x, ux)))]
   }
-  
+
   # Reshape data for visualization
   jaccard_long <- reshape2::melt(jaccard_data,
                                  id.vars = c("Iteration", "Comparison", "ParameterCombination",
@@ -1843,16 +1843,16 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
                                  measure.vars = c("Jaccard_Raw", "Jaccard_FDR"),
                                  variable.name = "Correction_Type",
                                  value.name = "Jaccard_Index")
-  
+
   # Clean up labels for better readability
   jaccard_long$Correction_Type <- ifelse(jaccard_long$Correction_Type == "Jaccard_Raw",
                                          "Raw p-values", "FDR corrected")
-  
+
   # Ensure proper factor ordering for consistent colors
   jaccard_long$Comparison <- factor(jaccard_long$Comparison,
                                     levels = c("Reduced vs Original", "Removed vs Original",
                                                "Reduced vs Removed"))
-  
+
   # Create base plot
   p <- ggplot(jaccard_long, aes(x = Comparison, y = Jaccard_Index, color = Comparison)) +
     geom_boxplot(position = "dodge", alpha = 0.3, fill = "cornsilk",
@@ -1883,7 +1883,7 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
       subtitle = plot_subtitle
     ) +
     guides(shape = "none", color = "none")
-  
+
   # Add annotations if requested
   if (add_annotations) {
     # Calculate statistics for each comparison type, correction type, AND parameter combination
@@ -1896,29 +1896,29 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
         mode_val = calculate_mode(Jaccard_Index),
         .groups = "drop"
       )
-    
+
     # Get unique comparisons in the order they appear in the plot
     unique_comparisons <- levels(jaccard_long$Comparison)
     if (is.null(unique_comparisons)) {
       unique_comparisons <- unique(jaccard_long$Comparison)
     }
-    
+
     # Create annotation data frame for each comparison, correction type, and parameter combination
     annotation_df <- data.frame()
-    
+
     for (i in seq_along(unique_comparisons)) {
       comp <- unique_comparisons[i]
-      
+
       # Get stats for this comparison across correction types and parameter combinations
       comp_stats <- stats_by_group[stats_by_group$Comparison == comp,]
-      
+
       if (nrow(comp_stats) > 0) {
         # Create annotations for this comparison for EACH correction type and parameter combination
         for (j in 1:nrow(comp_stats)) {
           correction_type <- comp_stats$Correction_Type[j]
           param_combo <- comp_stats$ParameterCombination[j]
           stats <- comp_stats[j,]
-          
+
           comp_annotations <- data.frame(
             Comparison = rep(comp, 4),
             Correction_Type = rep(correction_type, 4),
@@ -1937,7 +1937,7 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
         }
       }
     }
-    
+
     # Add annotations to plot
     if (nrow(annotation_df) > 0) {
       p <- p + geom_text(
@@ -1947,14 +1947,14 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
         hjust = 1, vjust = 0.5, size = 2.2, angle = 90, fontface = "plain"
       )
     }
-    
+
     # Adjust y-axis limits to accommodate annotations
     p <- p + scale_y_continuous(limits = c(0, 1.55), breaks = seq(0, 1, 0.25))
   } else {
     # Original y-axis limits without annotations
     p <- p + scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25))
   }
-  
+
   # Add faceting if requested and data supports it
   if (facet_by_param) {
     if (length(unique(jaccard_long$ParameterCombination)) > 1) {
@@ -1965,7 +1965,7 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
       p <- p + facet_wrap(Correction_Type ~ ., ncol = 1, strip.position = "right")
     }
   }
-  
+
   return(p)
 }
 
@@ -1979,19 +1979,19 @@ create_jaccard_plot <- function(jaccard_data, plot_title = "Jaccard index analys
 create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_data, plot_title = "Simple matching coefficient analysis",
                                                     plot_subtitle = "", facet_by_param = TRUE,
                                                     add_annotations = TRUE) {
-  
+
   if (nrow(simple_matching_coefficient_data) == 0) {
     return(ggplot() +
              theme_void() +
              labs(title = "No simple matching coefficient data available"))
   }
-  
+
   # Calculate mode function
   calculate_mode <- function(x) {
     ux <- unique(x)
     ux[which.max(tabulate(match(x, ux)))]
   }
-  
+
   # Reshape data for visualization
   simple_matching_coefficient_long <- reshape2::melt(simple_matching_coefficient_data,
                                                      id.vars = c("Iteration", "Comparison", "ParameterCombination",
@@ -1999,16 +1999,16 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
                                                      measure.vars = c("simple_matching_coefficient_Raw", "simple_matching_coefficient_FDR"),
                                                      variable.name = "Correction_Type",
                                                      value.name = "simple_matching_coefficient_Index")
-  
+
   # Clean up labels for better readability
   simple_matching_coefficient_long$Correction_Type <- ifelse(simple_matching_coefficient_long$Correction_Type == "simple_matching_coefficient_Raw",
                                                              "Raw p-values", "FDR corrected")
-  
+
   # Ensure proper factor ordering for consistent colors
   simple_matching_coefficient_long$Comparison <- factor(simple_matching_coefficient_long$Comparison,
                                                         levels = c("Reduced vs Original", "Removed vs Original",
                                                                    "Reduced vs Removed"))
-  
+
   # Create base plot
   p <- ggplot(simple_matching_coefficient_long, aes(x = Comparison, y = simple_matching_coefficient_Index, color = Comparison)) +
     geom_boxplot(position = "dodge", alpha = 0.3, fill = "cornsilk",
@@ -2039,7 +2039,7 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
       subtitle = plot_subtitle
     ) +
     guides(shape = "none", color = "none")
-  
+
   # Add annotations if requested
   if (add_annotations) {
     # Calculate statistics for each comparison type, correction type, AND parameter combination
@@ -2052,29 +2052,29 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
         mode_val = calculate_mode(simple_matching_coefficient_Index),
         .groups = "drop"
       )
-    
+
     # Get unique comparisons in the order they appear in the plot
     unique_comparisons <- levels(simple_matching_coefficient_long$Comparison)
     if (is.null(unique_comparisons)) {
       unique_comparisons <- unique(simple_matching_coefficient_long$Comparison)
     }
-    
+
     # Create annotation data frame for each comparison, correction type, and parameter combination
     annotation_df <- data.frame()
-    
+
     for (i in seq_along(unique_comparisons)) {
       comp <- unique_comparisons[i]
-      
+
       # Get stats for this comparison across correction types and parameter combinations
       comp_stats <- stats_by_group[stats_by_group$Comparison == comp,]
-      
+
       if (nrow(comp_stats) > 0) {
         # Create annotations for this comparison for EACH correction type and parameter combination
         for (j in 1:nrow(comp_stats)) {
           correction_type <- comp_stats$Correction_Type[j]
           param_combo <- comp_stats$ParameterCombination[j]
           stats <- comp_stats[j,]
-          
+
           comp_annotations <- data.frame(
             Comparison = rep(comp, 4),
             Correction_Type = rep(correction_type, 4),
@@ -2093,7 +2093,7 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
         }
       }
     }
-    
+
     # Add annotations to plot
     if (nrow(annotation_df) > 0) {
       p <- p + geom_text(
@@ -2103,14 +2103,14 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
         hjust = 1, vjust = 0.5, size = 2.2, angle = 90, fontface = "plain"
       )
     }
-    
+
     # Adjust y-axis limits to accommodate annotations
     p <- p + scale_y_continuous(limits = c(0, 1.55), breaks = seq(0, 1, 0.25))
   } else {
     # Original y-axis limits without annotations
     p <- p + scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25))
   }
-  
+
   # Add faceting if requested and data supports it
   if (facet_by_param) {
     if (length(unique(simple_matching_coefficient_long$ParameterCombination)) > 1) {
@@ -2121,7 +2121,7 @@ create_simple_matching_coefficient_plot <- function(simple_matching_coefficient_
       p <- p + facet_wrap(Correction_Type ~ ., ncol = 1, strip.position = "right")
     }
   }
-  
+
   return(p)
 }
 
