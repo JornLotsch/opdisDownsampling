@@ -845,5 +845,8 @@ if (RUN_PARAMETER_IMPACT_ANALYSIS && exists("parameter_impact_analysis")) {
   print(parameter_impact_analysis)
 }
 
+# Analyze results per varibale class
+source("analyse_variable_classes.R")
+
 # Save all 
 save.image(file = "experiment_ascending_significance_and_noise_data.RData")

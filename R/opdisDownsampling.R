@@ -197,7 +197,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
     stop(sprintf("opdisDownsampling: Failed to allocate matrices: %s", e$message))
   })
 
-  # Fill matrices with enhanced validation
+  # Fill matrices and validate
   for (i in seq_len(n_trials)) {
     if (!is.null(ReducedDiag[[i]])) {
       tryCatch({
@@ -230,13 +230,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   # Find best subsample using refactored selection logic with error handling
   BestTrial <- tryCatch({
     if (OptimizeBetween) {
-      select_best_trial_optimize_between(AD_reduced_vs_removed_statMat, WorstSample)
+      select_best_trial_one_matrix(AD_reduced_vs_removed_statMat, WorstSample)
     } else if (CheckThreefold && CheckRemoved) {
       select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat,WorstSample)
     } else if (CheckRemoved) {
       select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat, WorstSample)
     } else {
-      select_best_trial_reduced_only(AD_reduced_statMat, WorstSample)
+      select_best_trial_one_matrix(AD_reduced_statMat, WorstSample)
     }
   }, error = function(e) {
     warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),
