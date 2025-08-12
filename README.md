@@ -56,7 +56,7 @@ library(opdisDownsampling)
 
 data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, MaxCores = 1)
+  Size = 50, Seed = 42, MaxCores = 1)
 ```
 
 ### Memory-efficient processing for large datasets
@@ -64,11 +64,11 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 ```r
 # Automatic memory optimization for large datasets
 LargeDataSample <- opdisDownsampling(Data = large_dataset, 
-  Size = 0.1, nTrials = 5000, verbose = TRUE)
+  Size = 0.1, Seed = 42, nTrials = 5000, verbose = TRUE)
 
 # Custom chunk size for fine-tuned memory control
 CustomSample <- opdisDownsampling(Data = my_data, 
-  Size = 100, nTrials = 2000, JobSize = 50)
+  Size = 100, Seed = 42, nTrials = 2000, JobSize = 50)
 ```
 
 ### Arguments
@@ -78,7 +78,7 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `Data` | Numeric data frame or matrix to downsample |
 | `Cls` | Class membership vector; if missing, all data assigned to one class |
 | `Size` | Proportion (0–1) or absolute number of rows to retain |
-| `Seed` | Integer for reproducibility |
+| `Seed` | Integer for reproducibility. Advised to be set as parameter. |
 | `nTrials` | Number of sampling trials (default: 1,000) |
 | `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
 | `MaxCores` | Maximum cores for parallel processing |
