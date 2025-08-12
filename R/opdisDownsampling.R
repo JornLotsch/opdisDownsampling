@@ -10,6 +10,7 @@
 #'   If 0 < Size < 1, it is treated as a proportion of the original dataset.
 #'   If Size >= 1, it is treated as the absolute number of instances to retain.
 #' @param Seed An integer value to be used as the random seed for reproducibility.
+#'   Advised to be set as parameter.
 #' @param nTrials The number of trials to perform when sampling the data.
 #' @param TestStat A character string specifying the statistical test to be used for
 #'   comparing the distributions.

@@ -20,7 +20,7 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{Size}{The number (integer) or proportion (0<Size<1) of instances to draw from the dataset.
       The reduction is class proportional and aims to preserve the variable distributions.}
 
- \item{Seed}{Integer seed used to initialize the random number generator. Useful for reproducibility.}
+ \item{Seed}{Integer seed used to initialize the random number generator. Needed for reproducibility. Advised to be set as parameter.}
 
  \item{nTrials}{Number of random sampling trials used to find the optimal subset (default: 1000).}
 
@@ -128,12 +128,12 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
 ## Example: Down-sample the Iris dataset to 50 points
 data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, MaxCores = 1)
+  Size = 50, Seed = 42, MaxCores = 1)
 
 ## Example: Down-sample with custom chunk size and verbose output
 data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, MaxCores = 1, JobSize = 25, verbose = TRUE)
+  Size = 50, Seed = 42, MaxCores = 1, JobSize = 25, verbose = TRUE)
 
 ## Example: Use non-uniform variable selection to filter noise variables
 data(iris)
@@ -142,18 +142,18 @@ noisy_iris <- cbind(iris[,1:4],
                     noise1 = runif(nrow(iris), 0, 10),
                     noise2 = runif(nrow(iris), -5, 5))
 Iris_filtered <- opdisDownsampling(Data = noisy_iris, Cls = as.integer(iris$Species),
-  Size = 50, NonNoiseSelection = TRUE, UniformThreshold = 0.05, MaxCores = 1)
+  Size = 50, Seed = 42, NonNoiseSelection = TRUE, UniformThreshold = 0.05, MaxCores = 1)
 
 ## Example: Combine PCA and non-uniform selection
 data(iris)
 Iris_combined <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, PCAimportance = TRUE, NonNoiseSelection = TRUE, MaxCores = 1)
+  Size = 50, Seed = 42, PCAimportance = TRUE, NonNoiseSelection = TRUE, MaxCores = 1)
 
 ## Example: Memory-efficient processing of large dataset with many trials
 \dontrun{
 # For large datasets, automatic chunking optimizes memory usage
 LargeDataSample <- opdisDownsampling(Data = large_dataset,
-  Size = 0.1, nTrials = 5000, verbose = TRUE)
+  Size = 0.1, Seed = 42, nTrials = 5000, verbose = TRUE)
 }
 }
 \keyword{downsampling}
