@@ -12,8 +12,6 @@
 #'   You can provide a custom range for specific search requirements.
 #' @param fallback_seed An integer value to return if no matching seed is found
 #'   within the specified range. Default is 42.
-#' @param verbose A logical value indicating whether to print search progress
-#'   and diagnostic information. Default is FALSE.
 #'
 #' @return An integer representing the seed value that produces the current RNG state,
 #'   or the fallback value if no matching seed is found within the specified range.
@@ -37,8 +35,8 @@
 #' \itemize{
 #'   \item The smart search strategy significantly improves performance for common use cases
 #'   \item Most commonly used seeds (1, 42, 123, etc.) are found very quickly
-#'   \item The default search range is much smaller than the original (10,000 vs 100,000,000)
-#'   \item For larger search ranges, consider using verbose = TRUE to monitor progress
+#'   \item Uses vectorized lapply approach for optimal performance
+#'   \item Always returns a valid integer, never NA
 #' }
 #'
 #' \strong{Important Notes:}
@@ -47,13 +45,12 @@
 #'   \item The search range should be chosen based on the likely seed values used
 #'   \item The function modifies .Random.seed during the search process
 #'   \item This is a brute-force reverse engineering approach
-#'   \item Always returns a valid integer, never NA
 #' }
 #'
 #' @seealso \code{\link{set.seed}}
 #'
 #' @export
-get_seed <- function(range = NULL, fallback_seed = 42, verbose = FALSE) {
+get_seed <- function(range = NULL, fallback_seed = 42) {
   if (!exists(".Random.seed", envir = globalenv())) {
     stop("No RNG state found.")
   }
@@ -72,33 +69,19 @@ get_seed <- function(range = NULL, fallback_seed = 42, verbose = FALSE) {
     range <- range[!duplicated(range)]
   }
 
-  total_tests <- length(range)
-  if (verbose) {
-    cat(sprintf("Searching %d seed values...\n", total_tests))
-  }
-
-  # Search with progress updates
-  for (i in seq_along(range)) {
-    s <- range[i]
+  # Generate all .Random.seed states for the range using lapply
+  seed_states <- lapply(range, function(s) {
     set.seed(s)
+    .Random.seed
+  })
 
-    if (identical(.Random.seed, current)) {
-      if (verbose) {
-        cat(sprintf("Found seed %d after %d tests\n", s, i))
-      }
-      return(s)
-    }
+  # Find matches using vectorized comparison
+  matches <- which(vapply(seed_states, function(x) identical(x, current), logical(1)))
 
-    # Progress indication for long searches
-    if (verbose && i %% 5000 == 0) {
-      cat(sprintf("Tested %d/%d seeds...\n", i, total_tests))
-    }
+  # Return first match or fallback
+  if (length(matches) > 0) {
+    return(range[matches[1]])
+  } else {
+    return(fallback_seed)
   }
-
-  if (verbose) {
-    cat(sprintf("No matching seed found in %d tests, returning fallback: %d\n",
-                total_tests, fallback_seed))
-  }
-
-  return(fallback_seed)
 }
