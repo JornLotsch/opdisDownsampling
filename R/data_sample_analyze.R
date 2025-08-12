@@ -137,40 +137,6 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   # Pre-compute data subset for selected variables only
   DataSubset <- DataAndClasses[, c(selectedVars, names(DataAndClasses)[ncol(DataAndClasses)]), drop = FALSE]
 
-  # Memory-optimized sampling function
-  make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween) {
-    df_reduced <- MakeReducedDataMat(DataSubset, Size, Seed)
-    ADv_reduced <- CompareReducedDataMat(DataAndClasses = DataSubset,
-                                         ReducedDataList = df_reduced$ReducedDataList,
-                                         TestStat = TestStat)
-
-    if (CheckRemoved || OptimizeBetween) {
-      ADv_removed <- CompareReducedDataMat(DataAndClasses = DataSubset,
-                                           ReducedDataList = df_reduced$RemovedDataList,
-                                           TestStat = TestStat)
-    } else {
-      ADv_removed <- rep(NA_real_, length(selectedVars))
-      names(ADv_removed) <- selectedVars
-    }
-
-    if (CheckThreefold || OptimizeBetween) {
-      ADv_reduced_vs_removed <- CompareReducedDataMat(DataAndClasses = df_reduced$ReducedDataList,
-                                                      ReducedDataList = df_reduced$RemovedDataList,
-                                                      TestStat = TestStat)
-    } else {
-      ADv_reduced_vs_removed <- rep(NA_real_, length(selectedVars))
-      names(ADv_reduced_vs_removed) <- selectedVars
-    }
-
-
-    # Clean up intermediate objects
-    rm(df_reduced)
-
-    return(list(ADv_reduced = ADv_reduced[selectedVars],
-                ADv_removed = ADv_removed[selectedVars],
-                ADv_reduced_vs_removed = ADv_reduced_vs_removed[selectedVars]))
-  }
-
   # Process in chunks to reduce memory pressure
   process_chunk <- function(seed_chunk, DataSubset, TestStat, Size, selectedVars, CheckRemoved, CheckThreefold, OptimizeBetween, use_parallel = FALSE, cores = 1) {
     if (use_parallel && cores > 1 && length(seed_chunk) > 1) {

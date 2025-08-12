@@ -120,7 +120,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
 
   # Initialize environment
   if (missing(Seed)) {
-    Seed <- as.integer(get_seed()[1])
+    Seed <- as.integer(get_seed())
   }
   list.of.seeds <- 1:nTrials + Seed - 1
   nProc <- determine_n_cores(MaxCores)
