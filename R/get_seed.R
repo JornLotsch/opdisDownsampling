@@ -8,7 +8,7 @@
 #'
 #' @param range A numeric vector specifying the range of seed values to test.
 #'   Default is NULL, which uses a smart search strategy: tests common seed values
-#'   (1, 42, 123, etc.) first, then performs systematic search from 101 to 10000.
+#'   (1, 42, 123, etc.) first, then performs systematic search from 101 to 100000.
 #'   You can provide a custom range for specific search requirements.
 #' @param fallback_seed An integer value to return if no matching seed is found
 #'   within the specified range. Default is 42.
@@ -24,9 +24,9 @@
 #'   \item Using a smart search strategy:
 #'     \itemize{
 #'       \item First testing common seed values (1, 42, 123, 1234, etc.)
-#'       \item Then performing systematic search in a reasonable range (101-10000)
+#'       \item Then performing systematic search from 101 to 100000
 #'     }
-#'   \item For each value, calling \code{set.seed()} with that value
+#'   \item For each range, calling \code{set.seed()} with each value in that range
 #'   \item Comparing the resulting .Random.seed with the saved current state
 #'   \item Returning the first matching seed value found, or the fallback value
 #' }
@@ -35,7 +35,7 @@
 #' \itemize{
 #'   \item The smart search strategy significantly improves performance for common use cases
 #'   \item Most commonly used seeds (1, 42, 123, etc.) are found very quickly
-#'   \item Uses vectorized lapply approach for optimal performance
+#'   \item Uses efficient helper function to eliminate code duplication
 #'   \item Always returns a valid integer, never NA
 #' }
 #'
@@ -45,6 +45,7 @@
 #'   \item The search range should be chosen based on the likely seed values used
 #'   \item The function modifies .Random.seed during the search process
 #'   \item This is a brute-force reverse engineering approach
+#'   \item Memory and time intensive for large search ranges
 #' }
 #'
 #' @seealso \code{\link{set.seed}}
@@ -57,31 +58,36 @@ get_seed <- function(range = NULL, fallback_seed = 42) {
 
   current <- get(".Random.seed", envir = globalenv())
 
-  # Define smart search order: common values first, then systematic search
+  # Helper function to search for matching seed in a given range
+  search_range <- function(search_values) {
+    seed_states <- lapply(search_values, function(s) {
+      set.seed(s)
+      .Random.seed
+    })
+    matches <- which(vapply(seed_states, function(x) identical(x, current), logical(1)))
+    if (length(matches) > 0) return(search_values[matches[1]])
+    return(NULL)
+  }
+
+  # Define search ranges
   if (is.null(range)) {
-    # Common seed values people use
+    # Smart search order: common values first, then systematic search
     common_seeds <- c(1, 42, 123, 1234, 12345, 2023, 2024, 2025,
                       1:100, 1000, 5000, 9999, 99999)
-    # Then systematic search in smaller range
-    systematic_range <- 101:10000
-    range <- c(common_seeds, systematic_range)
-    # Remove duplicates while preserving order
-    range <- range[!duplicated(range)]
-  }
+    systematic_range <- 101:100000
 
-  # Generate all .Random.seed states for the range using lapply
-  seed_states <- lapply(range, function(s) {
-    set.seed(s)
-    .Random.seed
-  })
+    # Search common seeds first
+    result <- search_range(common_seeds)
+    if (!is.null(result)) return(result)
 
-  # Find matches using vectorized comparison
-  matches <- which(vapply(seed_states, function(x) identical(x, current), logical(1)))
-
-  # Return first match or fallback
-  if (length(matches) > 0) {
-    return(range[matches[1]])
+    # Then search systematic range
+    result <- search_range(systematic_range)
+    if (!is.null(result)) return(result)
   } else {
-    return(fallback_seed)
+    # Use provided range
+    result <- search_range(range)
+    if (!is.null(result)) return(result)
   }
+
+  return(fallback_seed)
 }

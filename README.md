@@ -78,7 +78,7 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `Data` | Numeric data frame or matrix to downsample |
 | `Cls` | Class membership vector; if missing, all data assigned to one class |
 | `Size` | Proportion (0–1) or absolute number of rows to retain |
-| `Seed` | Integer for reproducibility. Advised to be set as parameter. |
+| `Seed` | Integer for reproducibility. Advised to be set as parameter. If not set as parameter, only outside-set seeds 1:100000 are taken, else Seed is set to 42. |
 | `nTrials` | Number of sampling trials (default: 1,000) |
 | `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
 | `MaxCores` | Maximum cores for parallel processing |
