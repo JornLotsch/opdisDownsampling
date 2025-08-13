@@ -73,25 +73,25 @@ CustomSample <- opdisDownsampling(Data = my_data,
 
 ### Arguments
 
-| Argument | Description |
-| --- | --- |
-| `Data` | Numeric data frame or matrix to downsample |
-| `Cls` | Class membership vector; if missing, all data assigned to one class |
-| `Size` | Proportion (0–1) or absolute number of rows to retain |
-| `Seed` | Integer for reproducibility. Advised to be set as parameter. If not set as parameter, only outside-set seeds 1:100000 are taken, else Seed is set to 42. |
-| `nTrials` | Number of sampling trials (default: 1,000) |
+| Argument | Description                                                                                                                                                            |
+| --- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Data` | Numeric data frame or matrix to downsample                                                                                                                             |
+| `Cls` | Class membership vector; if missing, all data assigned to one class                                                                                                    |
+| `Size` | Proportion (0–1) or absolute number of rows to class-proportionally retain                                                                                              |
+| `Seed` | Integer for reproducibility. Advised to be set as parameter. If not set as parameter, outside-set seeds are used. Possibly slow. Fallback: Seed = 42.                  |
+| `nTrials` | Number of sampling trials (default: 1,000)                                                                                                                             |
 | `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
-| `MaxCores` | Maximum cores for parallel processing |
-| `PCAimportance` | Use PCA for variable selection (logical) |
-| `CheckRemoved` | Also optimize the removed part of the data for distribution equality with the original (logical) |
-| `CheckThreefold` | Also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical) |
-| `OptimizeBetween` | Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisons are not considered. |
-| `JobSize` | Number of trials per chunk for memory optimization (auto-calculated if `NULL`) |
-| `verbose` | Print diagnostic information about memory usage and chunking (logical) |
-| `NonNoiseSelection` | Use statistical tests to identify non-uniform variables and filter noise (logical) |
-| `UniformTestStat` | Statistical test for non-uniform variable selection (default: ) `"ks"` |
-| `UniformThreshold` | Threshold for non-uniform variable selection (default: 0.1) |
-| `WorstSample` | A logical value for testing purpose reversing the split ranking to obtain the least similar subsample (default: FALSE)  |
+| `MaxCores` | Maximum cores for parallel processing                                                                                                                                  |
+| `PCAimportance` | Use PCA for variable selection (logical)                                                                                                                               |
+| `CheckRemoved` | Also optimize the removed part of the data for distribution equality with the original (logical)                                                                       |
+| `CheckThreefold` | Also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical)                               |
+| `OptimizeBetween` | Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisons are not considered.                    |
+| `JobSize` | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                                         |
+| `verbose` | Print diagnostic information about memory usage and chunking (logical)                                                                                                 |
+| `NonNoiseSelection` | Use statistical tests to identify non-uniform variables and filter noise (logical)                                                                                     |
+| `UniformTestStat` | Statistical test for non-uniform variable selection (default: ) `"ks"`                                                                                                 |
+| `UniformThreshold` | Threshold for non-uniform variable selection (default: 0.1)                                                                                                            |
+| `WorstSample` | A logical value for testing purpose reversing the split ranking to obtain the least similar subsample (default: FALSE)                                                 |
 
 
 ### Available `TestStat` options
