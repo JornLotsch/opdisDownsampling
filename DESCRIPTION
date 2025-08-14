@@ -6,8 +6,9 @@ Version: 1.5
 Description: An optimized method for distribution-preserving class-proportional down-sampling of bio-medical data.
 Depends: R (>= 3.5.0)
 Imports: parallel, graphics, methods, stats, caTools, pracma,
-        twosamples, doParallel, pbmcapply, foreach, utils
+        twosamples, doParallel, pbmcapply, foreach, utils, Rcpp (>= 1.0.0)
 LazyData: true
+LinkingTo: Rcpp
 Suggests: testthat
 License: GPL-3
 URL: https://github.com/JornLotsch/opdisDownsampling
