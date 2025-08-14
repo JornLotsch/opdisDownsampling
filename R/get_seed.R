@@ -12,7 +12,8 @@
 #'   You can provide a custom range for specific search requirements.
 #' @param fallback_seed An integer value to return if no matching seed is found
 #'   within the specified range. Default is 42.
-#' @param max_search Maximum value for the systematic search. Default is 1e9 (1 billion).
+#' @param max_search Maximum value for the systematic search. 
+#'   Default is 2147483647 (largest 32bit integer).
 #' @param step_size Size of each search range chunk. Default is 100000.
 #'
 #' @return An integer representing the seed value that produces the current RNG state,
@@ -54,7 +55,7 @@
 #' @seealso \code{\link{set.seed}}
 #'
 #' @export
-get_seed <- function(range = NULL, fallback_seed = 42, max_search = 1e9, step_size = 100000) {
+get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647, step_size = 100000) {
   if (!exists(".Random.seed", envir = globalenv())) {
     stop("No RNG state found.")
   }
@@ -109,6 +110,26 @@ get_seed <- function(range = NULL, fallback_seed = 42, max_search = 1e9, step_si
       range_start <- range_end + 1
     }
 
+    # Stage 3: Negative ranges
+    range_start <- 0
+
+    while (range_start >= -max_search) {
+      range_end <- max(range_start - step_size + 1, -max_search)
+
+      cat("Searching range:", format(range_start, scientific = FALSE),
+          "to", format(range_end, scientific = FALSE),
+          "(", format(abs(range_end - range_start) + 1, scientific = FALSE), " values)...\n")  # Fixed!
+
+      result <- search_range(range_start:range_end)
+      if (!is.null(result)) {
+        cat("Found seed:", result, "\n")
+        return(result)
+      }
+
+      # Move to next range
+      range_start <- range_end - 1
+    }
+    
     cat("Exhaustive search completed. No matching seed found within range 1 to",
         format(max_search, scientific = FALSE), "\n")
 
