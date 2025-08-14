@@ -196,7 +196,7 @@ Lötsch J, Malkusch S, Ultsch A. Optimal distribution-preserving downsampling of
 
 ## Related links
 
-- [CRAN package page](https://cran.r-project.org/package=opdisDownsampling)
+- [CRAN package page](https://cran.r-project.org/package=opdisDownsampling) (older version)
 - [Original publication (PLoS ONE)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838)
 
 ---
