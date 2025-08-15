@@ -78,9 +78,9 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `Data` | Numeric data frame or matrix to downsample                                                                                                                            |
 | `Cls` | Class membership vector; if missing, all data assigned to one class                                                                                                   |
 | `Size` | Proportion (0–1) or absolute number of rows to class-proportionally retain                                                                                             |
-| `Seed` | Integer for reproducibility. Advised to be set as parameter. If not set as parameter, outside-set seeds are used. Possibly slow. Fallback: Seed = 42.                 |
+| `Seed` | Seed for reproducibility. Options: `"auto"` (complex seed recovery, slow), `"simple"` (fast reproducible seed, default), or integer (exact control, recommended). Use integers for systematic testing, `"simple"` for general use, `"auto"` for RNG state continuity. |
 | `nTrials` | Number of sampling trials (default: 1000)                                                                                                                             |
-| `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
+| `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
 | `MaxCores` | Maximum cores for parallel processing                                                                                                                                 |
 | `PCAimportance` | Use PCA for variable selection (logical)                                                                                                                              |
 | `CheckRemoved` | Also optimize the removed part of the data for distribution equality with the original (logical)                                                                      |

@@ -2,10 +2,11 @@
 \alias{opdisDownsampling}
 \title{Optimal Distribution Preserving Down-Sampling of Bio-Medical Data}
 \description{
-  The package provides functions for optimal distribution-preserving down-sampling of large (bio-medical) data sets. It draws statistically representative subsets of data while preserving the class proportions and original data distribution.
+  The package provides functions for optimal distribution-preserving down-sampling of large (bio-medical) data sets.
+  It draws statistically representative subsets of data while preserving the class proportions and original data distribution.
 }
 \usage{
-opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
+opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
   PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE,
   OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE,
@@ -20,7 +21,9 @@ opdisDownsampling(Data, Cls, Size, Seed, nTrials = 1000,
  \item{Size}{The number (integer) or proportion (0<Size<1) of instances to draw from the dataset.
       The reduction is class proportional and aims to preserve the variable distributions.}
 
- \item{Seed}{Integer seed used to initialize the random number generator. Needed for reproducibility. Advised to be set as parameter.}
+ \item{Seed}{Seed value for reproducibility. Options: \code{"auto"} (complex seed recovery, slow), \code{"simple"}
+      (fast reproducible seed, default), or integer (exact control, recommended). Use integers for systematic testing with different seeds,
+      \code{"simple"} for general use, or \code{"auto"} when you need to maintain exact RNG state continuity.}
 
  \item{nTrials}{Number of random sampling trials used to find the optimal subset (default: 1000).}
 

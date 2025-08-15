@@ -9,8 +9,15 @@
 #' @param Size A numeric value specifying the desired size of the downsampled dataset.
 #'   If 0 < Size < 1, it is treated as a proportion of the original dataset.
 #'   If Size >= 1, it is treated as the absolute number of instances to retain.
-#' @param Seed An integer value to be used as the random seed for reproducibility.
-#'   Advised to be set as parameter.
+#' @param Seed Seed value for reproducibility. Can be an integer value, or one of:
+#'   \itemize{
+#'     \item \code{"auto"}: Uses complex seed recovery to match current RNG state
+#'     \item \code{"simple"} (default): Uses a fast, simple reproducible seed (recommended for most uses)
+#'     \item Integer: Use exact seed value for full control
+#'   }
+#'   For systematic testing with different seeds, use integer values.
+#'   Otherwise, use \code{"simple"} for good performance with reproducibility,
+#'   or \code{"auto"} when you need to maintain exact RNG state continuity.
 #' @param nTrials The number of trials to perform when sampling the data.
 #' @param TestStat A character string specifying the statistical test to be used for
 #'   comparing the distributions.
@@ -51,7 +58,7 @@
 #' @importFrom pbmcapply pbmclapply
 #' @import foreach
 #' @export
-opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = "ad",
+opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
                               CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
                               JobSize = 0, verbose = FALSE, NonNoiseSelection = FALSE,
@@ -120,10 +127,24 @@ opdisDownsampling <- function(Data, Cls, Size, Seed, nTrials = 1000, TestStat = 
   }
 
   # Initialize environment
-  if (missing(Seed)) {
+  # Seed handling with three clear options
+  if (is.numeric(Seed)) {
+    # Option 1: Use provided integer seed directly
+    Seed <- as.integer(Seed)
+  } else if (is.character(Seed)) {
+    Seed <- switch(Seed,
+                   "auto" = as.integer(get_seed()),           # Complex seed recovery
+                   "simple" = sample(1:100, 1),              # Simple reproducible seed (default)
+                   stop("Invalid Seed string. Use 'auto', 'simple', or an integer.")
+    )
+  } else {
+    # Fallback for backward compatibility
     Seed <- as.integer(get_seed())
   }
+
   list.of.seeds <- 1:nTrials + Seed - 1
+
+  # Number of cores used
   nProc <- determine_n_cores(MaxCores)
 
   # Determine optimal chunk size if not provided or handle no-chunking request
