@@ -135,7 +135,6 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent = FALSE, l
       # Calculate histogram
       V <- pracma::histc(x, edges = edges1)
       dummy <- V$cnt
-      bin <- V$bin
 
       # Normalize to get density estimate
       H <- dummy / n

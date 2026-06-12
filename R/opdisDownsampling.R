@@ -73,9 +73,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
         "opdisDownsampling: Variable '%s' contains only NA values and will be excluded from distribution comparisons.",
         col
       ), call. = FALSE)
-    }
-    # Warn if a variable has many NAs and subsample is small (before Size conversion)
-    else if (na_proportion > 0.5) {
+    } else if (na_proportion > 0.5) {
       # Check if Size is a proportion or absolute
       target_size <- if (Size > 0 && Size < 1) Size * nrow(dfx) else Size
       if (target_size < nrow(dfx) * 0.1) {

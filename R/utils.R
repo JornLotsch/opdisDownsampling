@@ -80,11 +80,9 @@ nanmax <- function(Data) {
   if (length(dim(Data)) == 2) {
     # Matrix case: return column-wise maxima
     SpaltenMinima <- apply(Data, 2, function(x) max(x, na.rm = TRUE))
-    SpaltenInd <- NaN
   } else {
     # Vector case: return overall maximum
     SpaltenMinima <- max(Data, na.rm = TRUE)
-    SpaltenInd <- which(Data == SpaltenMinima)
   }
   return(SpaltenMinima)
 }
