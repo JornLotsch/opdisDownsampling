@@ -15,8 +15,8 @@ CompareReducedDataMat <- function(DataAndClasses, ReducedDataList, TestStat) {
   # Compare the original and downsampled distributions
   return(mapply(
     CompDistrib,
-    vector1 = DataAndClasses[ 1:(ncol(DataAndClasses) - 1)],
-    vector2 = ReducedDataList[ 1:(ncol(DataAndClasses) - 1)],
+    vector1 = DataAndClasses[1:(ncol(DataAndClasses) - 1)],
+    vector2 = ReducedDataList[1:(ncol(DataAndClasses) - 1)],
     MoreArgs = list(TestStat = TestStat)
   ))
 }

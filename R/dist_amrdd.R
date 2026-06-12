@@ -1,14 +1,12 @@
 #' Calculate the Mean Relative Difference for Two Probability Density Distributions
 #'
-#' This function calculates the mean relative difference for two probability density
-#' distributions expressed as Smooth Density Histograms.
+#' This internal helper calculates the mean relative difference between two
+#' probability density distributions represented as smooth density histograms.
 #'
-#' @param vector1 A numeric vector representing the first probability density distribution.
-#' @param vector2 A numeric vector representing the second probability density distribution.
+#' @param vector1 A numeric vector representing the first distribution.
+#' @param vector2 A numeric vector representing the second distribution.
 #'
-#' @return The mean relative difference between the two probability density distributions.
-#'
-#' @importFrom SmoothDensHist1dim SmoothDensHist1dim
+#' @return The mean relative difference between the two smoothed density histograms.
 #'
 amrdd <- function(vector1, vector2) {
   # Combine the two input vectors and create a Smooth Density Histogram

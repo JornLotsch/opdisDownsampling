@@ -39,7 +39,7 @@ SmoothDensHist1dim <- function(x, KernelsOrNbins = NULL, SDHinPercent = FALSE, l
     D2 <- diff(D1, 1) # Second difference operator
 
     # Regularization matrix combining first and second order penalties
-    P <- lambda ^ 2 * (t(D2) %*% D2) + 2 * lambda * (t(D1) %*% D1)
+    P <- lambda^2 * (t(D2) %*% D2) + 2 * lambda * (t(D1) %*% D1)
 
     # Solve regularized system
     Z <- solve((E + P), Y)

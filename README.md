@@ -64,8 +64,8 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 ```r
 # Automatic memory optimization for large datasets
 LargeDataSample <- opdisDownsampling(Data = large_dataset, 
-  Size = 0.1, Seed = 42, nTrials = 5000, verbose = TRUE)
-
+  Size = 0.1, Seed = 42, nTrials = 5000, JobSize = NULL, verbose = TRUE)
+  
 # Custom chunk size for fine-tuned memory control
 CustomSample <- opdisDownsampling(Data = my_data, 
   Size = 100, Seed = 42, nTrials = 2000, JobSize = 50)
@@ -73,26 +73,18 @@ CustomSample <- opdisDownsampling(Data = my_data,
 
 ### Arguments
 
-| Argument | Description                                                                                                                                                           |
-| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `Data` | Numeric data frame or matrix to downsample                                                                                                                            |
-| `Cls` | Class membership vector; if missing, all data assigned to one class                                                                                                   |
-| `Size` | Proportion (0–1) or absolute number of rows to class-proportionally retain                                                                                             |
-| `Seed` | Seed for reproducibility. Options: `"auto"` (complex seed recovery, slow), `"simple"` (fast reproducible seed, default), or integer (exact control, recommended). Use integers for systematic testing, `"simple"` for general use, `"auto"` for RNG state continuity. |
-| `nTrials` | Number of sampling trials (default: 1000)                                                                                                                             |
-| `TestStat` | Statistical test for distribution comparison (default: ). Available options: , , , , , , , , `"ad"``"kuiper"``"cvm"``"wass"``"dts"``"ks"``"kld"``"amrdd"``"euc"` |
-| `MaxCores` | Maximum cores for parallel processing                                                                                                                                 |
-| `PCAimportance` | Use PCA for variable selection (logical)                                                                                                                              |
-| `CheckRemoved` | Also optimize the removed part of the data for distribution equality with the original (logical)                                                                      |
-| `CheckThreefold` | Also optimize the reduced part of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE (logical)                              |
-| `OptimizeBetween` | Whether to optimize the reduced part of the data for distribution equality with the removed part. If set, all other comparisons are not considered.                   |
-| `JobSize` | Number of trials per chunk for memory optimization (auto-calculated if `NULL`)                                                                                        |
-| `verbose` | Print diagnostic information about memory usage and chunking (logical)                                                                                                |
-| `NonNoiseSelection` | Use statistical tests to identify non-uniform variables and filter noise (logical)                                                                                    |
-| `UniformTestStat` | Statistical test for non-uniform variable selection (default: ) `"ks"`                                                                                                |
-| `UniformThreshold` | Threshold for non-uniform variable selection (default: 0.1)                                                                                                           |
-| `WorstSample` | A logical value for testing purpose reversing the split ranking to obtain the least similar subsample (default: FALSE)                                                |
-
+| Argument | Description |
+| --- | --- |
+| `Data` | Numeric data frame or matrix to downsample |
+| `Cls` | Class membership vector; if missing, all data are assigned to one class |
+| `Size` | Proportion (0–1) or absolute number of rows to class-proportionally retain |
+| `Seed` | Seed control. Options: `"auto"` for seed recovery, `"simple"` to generate and report a seed using the current RNG state, or an integer for exact reproducibility. Use integers for systematic testing and fully reproducible analyses. |
+| `nTrials` | Number of sampling trials. Default: `1000` |
+| `TestStat` | Statistical test for distribution comparison. Default: `"ad"`. Available options: `"ad"`, `"kuiper"`, `"cvm"`, `"wass"`, `"dts"`, `"ks"`, `"kld"`, `"amrdd"`, `"euc"`, `"nent"`. |
+| `MaxCores` | Maximum cores for parallel processing |
+| `PCAimportance` | Use PCA for variable selection |
+| `JobSize` | Number of trials per chunk. Use `0` for no chunking, `NULL` for automatic memory-aware chunk-size calculation, or a positive integer for manual chunking. |
+| `verbose` | Print diagnostic information about memory usage and chunking |
 
 ### Available `TestStat` options
 
@@ -110,20 +102,12 @@ CustomSample <- opdisDownsampling(Data = my_data,
 | `"nent"`  | Absolute normalized entropy difference (via `abs_norm_entropy_diff()`) |
 
 
-### Variable Selection Methods
-The package offers two complementary variable selection approaches:
+### Variable Selection Method
+The package offers PCA based variable selection approaches:
 #### PCA-based Selection (`PCAimportance = TRUE`)
 - Identifies variables with high loadings in principal components
 - Focuses on variables that capture the most variance in the data
 - Useful for dimensionality reduction while preserving data structure
-
-#### Non-uniform Selection (`NonNoiseSelection = TRUE`)
-- Uses statistical tests to identify variables that deviate from uniform distributions
-- Filters out noise variables automatically
-- Configurable test statistics, thresholds, and reference methods
-- Particularly effective for datasets with many irrelevant or noisy features
-
-**Combined Usage**: When both methods are enabled, the function first tries their intersection, then their union if intersection is empty, ensuring meaningful variables are always selected.
 
 ### Memory Optimization
 The package automatically optimizes memory usage through intelligent chunking:
@@ -152,19 +136,19 @@ Returns a list containing:
 
 ## Performance Tips
 ### For Large Datasets
-- Use `verbose = TRUE` to monitor memory usage
-- The automatic chunking will optimize memory usage based on your system
-- Consider using fewer trials initially to estimate processing time
+- Use `JobSize = NULL` to enable automatic memory-aware chunk-size calculation.
+- Use `verbose = TRUE` to monitor memory usage and chunking diagnostics.
+- Consider using fewer trials initially to estimate processing time.
 
 ### For Memory-Constrained Systems
-- Manually set smaller values (e.g., 10-25) `JobSize`
-- Monitor system memory usage during processing
-- Use fewer to reduce parallel memory overhead `MaxCores`
+- Use `JobSize = NULL` for automatic chunk-size calculation, or manually set smaller values such as `JobSize = 10` or `JobSize = 25`.
+- Monitor system memory usage during processing.
+- Use a smaller `MaxCores` value to reduce parallel memory overhead.
 
 ### For Small Datasets
-- The automatic chunking will use larger chunks for efficiency
-- Manual specification is usually not needed `JobSize`
-- Higher trial counts can be used without memory concerns
+- The default `JobSize = 0` processes all trials in a single batch.
+- Manual chunk-size specification is usually not needed for small datasets.
+- Higher trial counts can usually be used without memory concerns.
 
 
 ## Documentation
@@ -196,12 +180,6 @@ Lötsch J, Malkusch S, Ultsch A. Optimal distribution-preserving downsampling of
 
 ## Related links
 
-- [CRAN package page](https://cran.r-project.org/package=opdisDownsampling) (older version)
+- [CRAN package page](https://cran.r-project.org/package=opdisDownsampling) (check and compare versions)
 - [Original publication (PLoS ONE)](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838)
 
----
-## Experiments
-
-This repository also contains an `experiments` directory with additional research code and analyses. These experiments are **not part of the R library** but contain computational experiments and analyses conducted for research papers in preparation. The experimental code demonstrates various applications of the downsampling methods and includes comparative studies and validation analyses.
-
-**Note:** The experiments directory is separate from the main R package and is intended for research and development purposes.

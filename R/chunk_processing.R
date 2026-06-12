@@ -12,9 +12,6 @@
 #'     \item TestStat: Statistical test for comparing distributions
 #'     \item Size: Desired size of downsampled dataset
 #'     \item selectedVars: Vector of selected variable names
-#'     \item CheckRemoved: Logical for optimizing removed data
-#'     \item CheckThreefold: Logical for three-way optimization
-#'     \item OptimizeBetween: Logical for between-group optimization
 #'   }
 #' @param JobSize Number of seeds to process in each chunk.
 #' @param nProc Number of processor cores to use for parallel processing.
@@ -31,7 +28,6 @@
 #'
 #' @keywords internal
 process_seeds_in_chunks <- function(list.of.seeds, DataSubset, processing_params, JobSize, nProc) {
-
   # Split seeds into chunks
   seed_chunks <- split(list.of.seeds, ceiling(seq_along(list.of.seeds) / JobSize))
 
@@ -76,7 +72,6 @@ process_seeds_in_chunks <- function(list.of.seeds, DataSubset, processing_params
 #'
 #' @keywords internal
 process_single_chunk <- function(seed_chunk, DataSubset, processing_params, nProc) {
-
   use_parallel <- nProc > 1 && length(seed_chunk) > 1
 
   if (use_parallel) {
@@ -110,7 +105,6 @@ process_single_chunk <- function(seed_chunk, DataSubset, processing_params, nPro
 #'
 #' @keywords internal
 process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nProc) {
-
   if (Sys.info()[["sysname"]] == "Windows") {
     # Use foreach for Windows
     doParallel::registerDoParallel(min(nProc, length(seed_chunk)))
@@ -120,7 +114,7 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
 
     result <- foreach::foreach(
       seed = seed_chunk,
-      .combine = 'c',
+      .combine = "c",
       .maxcombine = length(seed_chunk),
       .multicombine = TRUE,
       .packages = c()
@@ -130,15 +124,11 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
         TestStat = processing_params$TestStat,
         Size = processing_params$Size,
         Seed = seed,
-        selectedVars = processing_params$selectedVars,
-        CheckRemoved = processing_params$CheckRemoved,
-        CheckThreefold = processing_params$CheckThreefold,
-        OptimizeBetween = processing_params$OptimizeBetween
+        selectedVars = processing_params$selectedVars
       ))
     }
 
     doParallel::stopImplicitCluster()
-
   } else {
     # Use mclapply for Unix-like systems
     result <- pbmcapply::pbmclapply(
@@ -149,14 +139,11 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
           TestStat = processing_params$TestStat,
           Size = processing_params$Size,
           Seed = seed,
-          selectedVars = processing_params$selectedVars,
-          CheckRemoved = processing_params$CheckRemoved,
-          CheckThreefold = processing_params$CheckThreefold,
-          OptimizeBetween = processing_params$OptimizeBetween
+          selectedVars = processing_params$selectedVars
         )
       },
       mc.cores = min(nProc, length(seed_chunk)),
-      mc.preschedule = TRUE  # Better load balancing
+      mc.preschedule = TRUE # Better load balancing
     )
   }
 
@@ -179,7 +166,6 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
 #'
 #' @keywords internal
 process_chunk_sequential <- function(seed_chunk, DataSubset, processing_params) {
-
   result <- lapply_with_bar(
     seed_chunk,
     function(seed) {
@@ -188,10 +174,7 @@ process_chunk_sequential <- function(seed_chunk, DataSubset, processing_params) 
         TestStat = processing_params$TestStat,
         Size = processing_params$Size,
         Seed = seed,
-        selectedVars = processing_params$selectedVars,
-        CheckRemoved = processing_params$CheckRemoved,
-        CheckThreefold = processing_params$CheckThreefold,
-        OptimizeBetween = processing_params$OptimizeBetween
+        selectedVars = processing_params$selectedVars
       )
     }
   )

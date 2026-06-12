@@ -41,7 +41,7 @@ determine_n_cores <- function(max_cores = NULL) {
 #' \dontrun{
 #' # Apply function with progress bar
 #' results <- lapply_with_bar(1:100, function(x) {
-#'   Sys.sleep(0.1)  # Simulate computation
+#'   Sys.sleep(0.1) # Simulate computation
 #'   x^2
 #' })
 #' }
@@ -70,11 +70,11 @@ lapply_with_bar <- function(X, FUN, ...) {
 #' \dontrun{
 #' # Vector example
 #' vec <- c(1, 2, NA, 4, NaN, 3)
-#' nanmax(vec)  # Returns 4
+#' nanmax(vec) # Returns 4
 #'
 #' # Matrix example
 #' mat <- matrix(c(1, NA, 3, 2, NaN, 4), nrow = 2)
-#' nanmax(mat)  # Returns column maxima
+#' nanmax(mat) # Returns column maxima
 #' }
 nanmax <- function(Data) {
   if (length(dim(Data)) == 2) {
@@ -118,13 +118,52 @@ validate_reduced_diag <- function(ReducedDiag) {
 #' @description Validates statistical matrices for problematic values
 #' @param matrices List of matrices to validate
 #' @param matrix_names Character vector of matrix names for error messages
+#' @param check_usage Logical vector indicating which matrices are actually used in analysis
 #' @return Invisible NULL. Issues warnings for problematic matrices
 #' @keywords internal
-validate_matrices <- function(matrices, matrix_names) {
+validate_matrices <- function(matrices, matrix_names, check_usage = rep(TRUE, length(matrices))) {
   for (i in seq_along(matrices)) {
+    # Skip validation if this matrix is not used in the analysis
+    if (!check_usage[i]) {
+      next
+    }
+
+    # Check if all values are NA
     if (all(is.na(matrices[[i]]))) {
-      warning(sprintf("opdisDownsampling: Matrix '%s' contains all NA values.",
-                      matrix_names[i]), call. = FALSE)
+      warning(sprintf(
+        "opdisDownsampling: Matrix '%s' contains all NA values.",
+        matrix_names[i]
+      ), call. = FALSE)
+      next
+    }
+
+    # Check for rows with all NA
+    rows_all_na <- apply(matrices[[i]], 1, function(x) all(is.na(x)))
+    if (any(rows_all_na)) {
+      n_bad_rows <- sum(rows_all_na)
+      warning(sprintf(
+        "opdisDownsampling: Matrix '%s' has %d row(s) with all NA values.",
+        matrix_names[i], n_bad_rows
+      ), call. = FALSE)
+    }
+
+    # Check for columns with all NA
+    cols_all_na <- apply(matrices[[i]], 2, function(x) all(is.na(x)))
+    if (any(cols_all_na)) {
+      n_bad_cols <- sum(cols_all_na)
+      warning(sprintf(
+        "opdisDownsampling: Matrix '%s' has %d column(s) with all NA values.",
+        matrix_names[i], n_bad_cols
+      ), call. = FALSE)
+    }
+
+    # Check if too many NAs overall (e.g., >50%)
+    na_proportion <- sum(is.na(matrices[[i]])) / length(matrices[[i]])
+    if (na_proportion > 0.5 && na_proportion < 1.0) {
+      warning(sprintf(
+        "opdisDownsampling: Matrix '%s' contains %.1f%% NA values.",
+        matrix_names[i], na_proportion * 100
+      ), call. = FALSE)
     }
   }
 }

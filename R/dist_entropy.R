@@ -19,7 +19,6 @@
 #' abs_norm_entropy_diff(x1, x2)
 #'
 abs_norm_entropy_diff <- function(vector1, vector2, bins_method = "FD", min_bins = 2, na_as_category = TRUE) {
-
   normalized_entropy <- function(x, bins_method = "FD", min_bins = 2, na_as_category = TRUE) {
     if (is.numeric(x) || is.integer(x)) {
       x_no_na <- na.omit(x)

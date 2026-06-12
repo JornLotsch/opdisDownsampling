@@ -10,7 +10,6 @@
 #' @export
 get_seed_cpp <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
                          step_size = 50000, batch_size = 10000, verbose = TRUE) {
-
   if (!exists(".Random.seed", envir = globalenv())) {
     stop("No RNG state found.")
   }
@@ -19,7 +18,9 @@ get_seed_cpp <- function(range = NULL, fallback_seed = 42, max_search = 21474836
 
   # Helper function using C++ backend
   searchRangeCpp <- function(search_values) {
-    if (length(search_values) == 0) return(NULL)
+    if (length(search_values) == 0) {
+      return(NULL)
+    }
 
     result <- findMatchingSeedsBatchCpp(
       as.integer(search_values),
@@ -41,8 +42,10 @@ get_seed_cpp <- function(range = NULL, fallback_seed = 42, max_search = 21474836
     }
 
     # Stage 1: Common seeds
-    common_seeds <- c(1, 42, 123, 1234, 12345, 2023, 2024, 2025,
-                      1:100, 1000, 5000, 9999, 99999)
+    common_seeds <- c(
+      1, 42, 123, 1234, 12345, 2023, 2024, 2025,
+      1:100, 1000, 5000, 9999, 99999
+    )
     if (verbose) {
       cat("Checking common seeds (", length(common_seeds), " values)...\n")
     }
@@ -59,9 +62,11 @@ get_seed_cpp <- function(range = NULL, fallback_seed = 42, max_search = 21474836
       range_end <- min(range_start + step_size - 1, max_search)
 
       if (verbose) {
-        cat("Searching range:", format(range_start, scientific = FALSE),
-            "to", format(range_end, scientific = FALSE),
-            "(", format(range_end - range_start + 1, scientific = FALSE), " values)...\n")
+        cat(
+          "Searching range:", format(range_start, scientific = FALSE),
+          "to", format(range_end, scientific = FALSE),
+          "(", format(range_end - range_start + 1, scientific = FALSE), " values)...\n"
+        )
       }
 
       result <- searchRangeCpp(range_start:range_end)
@@ -105,13 +110,14 @@ get_seed_cpp <- function(range = NULL, fallback_seed = 42, max_search = 21474836
 #' @export
 get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
                      step_size = 50000, use_cpp = TRUE, ...) {
-
   if (use_cpp) {
-    return(get_seed_cpp(range = range,
-                        fallback_seed = fallback_seed,
-                        max_search = max_search,
-                        step_size = step_size,
-                        ...))
+    return(get_seed_cpp(
+      range = range,
+      fallback_seed = fallback_seed,
+      max_search = max_search,
+      step_size = step_size,
+      ...
+    ))
   } else {
     # Fallback to original R implementation
     warning("Using slower R implementation")
@@ -133,7 +139,9 @@ get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
       # Clean up large intermediate object immediately
       rm(seed_states)
 
-      if (length(matches) > 0) return(search_values[matches[1]])
+      if (length(matches) > 0) {
+        return(search_values[matches[1]])
+      }
       return(NULL)
     }
 
@@ -141,8 +149,10 @@ get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
       cat("Starting exhaustive seed search up to", format(max_search, scientific = FALSE), "...\n")
 
       # Stage 1: Common seeds (fast check)
-      common_seeds <- c(1, 42, 123, 1234, 12345, 2023, 2024, 2025,
-                        1:100, 1000, 5000, 9999, 99999)
+      common_seeds <- c(
+        1, 42, 123, 1234, 12345, 2023, 2024, 2025,
+        1:100, 1000, 5000, 9999, 99999
+      )
       cat("Checking common seeds (", length(common_seeds), " values)...\n")
       result <- search_range(common_seeds)
       if (!is.null(result)) {
@@ -156,9 +166,11 @@ get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
       while (range_start <= max_search) {
         range_end <- min(range_start + step_size - 1, max_search)
 
-        cat("Searching range:", format(range_start, scientific = FALSE),
-            "to", format(range_end, scientific = FALSE),
-            "(", format(range_end - range_start + 1, scientific = FALSE), " values)...\n")
+        cat(
+          "Searching range:", format(range_start, scientific = FALSE),
+          "to", format(range_end, scientific = FALSE),
+          "(", format(range_end - range_start + 1, scientific = FALSE), " values)...\n"
+        )
 
         result <- search_range(range_start:range_end)
         if (!is.null(result)) {
@@ -170,9 +182,10 @@ get_seed <- function(range = NULL, fallback_seed = 42, max_search = 2147483647,
         range_start <- range_end + 1
       }
 
-      cat("Exhaustive search completed. No matching seed found within range 1 to",
-          format(max_search, scientific = FALSE), "\n")
-
+      cat(
+        "Exhaustive search completed. No matching seed found within range 1 to",
+        format(max_search, scientific = FALSE), "\n"
+      )
     } else {
       # Use provided range
       cat("Searching provided range (", length(range), " values)...\n")

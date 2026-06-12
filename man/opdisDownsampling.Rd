@@ -8,22 +8,20 @@
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  PCAimportance = FALSE, CheckRemoved = FALSE, CheckThreefold = FALSE,
-  OptimizeBetween = FALSE, JobSize = 0, verbose = FALSE,
-  NonNoiseSelection = FALSE, UniformTestStat = "ks",
-  UniformThreshold = 0.05, WorstSample = FALSE)
+  PCAimportance = FALSE, JobSize = 0, verbose = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
 
- \item{Cls}{Optional vector with class labels for each instance in \code{Data}. If missing, all instances are treated as belonging to the same class.}
+ \item{Cls}{Optional vector with class labels for each instance in \code{Data}.
+      If missing, all instances are treated as belonging to the same class.}
 
  \item{Size}{The number (integer) or proportion (0<Size<1) of instances to draw from the dataset.
       The reduction is class proportional and aims to preserve the variable distributions.}
 
- \item{Seed}{Seed value for reproducibility. Options: \code{"auto"} (complex seed recovery, slow), \code{"simple"}
-      (fast reproducible seed, default), or integer (exact control, recommended). Use integers for systematic testing with different seeds,
-      \code{"simple"} for general use, or \code{"auto"} when you need to maintain exact RNG state continuity.}
+\item{Seed}{Seed value. Options: \code{"auto"} for seed recovery, \code{"simple"}
+      to generate and report a seed using the current RNG state, or an integer for exact
+      reproducibility. Use integers for systematic testing and fully reproducible analyses.}
 
  \item{nTrials}{Number of random sampling trials used to find the optimal subset (default: 1000).}
 
@@ -48,40 +46,17 @@ opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
 
  \item{PCAimportance}{Logical; if \code{TRUE}, only variables deemed important by principal component analysis are used in computing similarity statistics.}
 
- \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also includes the subset of removed cases,
-      which can be used for data splits into training/test and validation.}
+ \item{JobSize}{Integer specifying the number of trials to process in each chunk.
+      If \code{0} (default), no chunking is applied. If \code{NULL}, an automatic
+      chunk size is calculated based on data dimensions, number of trials, available
+      system memory, and number of processor cores. A positive integer manually sets
+      the chunk size.}
 
- \item{CheckThreefold}{Logical; if \code{TRUE}, the optimization also includes the equal distribution of
-      the reduced and the removed data subsets, e.g. training/test and validation. Ignored when CheckRemoved is FALSE}
+ \item{verbose}{Logical; if \code{TRUE}, prints diagnostic information about chunk-size
+      selection, including data dimensions, estimated memory usage, and the chosen
+      chunking strategy. Useful for understanding memory usage patterns and debugging
+      performance issues.}
 
- \item{OptimizeBetween}{Logical; if \code{TRUE}, the optimization targets the reduced versus the removed data subsets, e.g. training/test and validation.
-      If set, all other comparisons are not performed.}
-
- \item{JobSize}{Integer specifying the number of trials to process in each memory-efficient chunk.
-      If \code{0} (default), no chunking is applied. If \code{NULL}, an optimal chunk size is automatically calculated based on data dimensions,
-      number of trials, available system memory, and number of processor cores. Smaller chunk sizes use less
-      memory but may increase computational overhead, while larger chunk sizes are more efficient but require
-      more memory. Manual specification overrides the automatic calculation.}
-
- \item{verbose}{Logical; if \code{TRUE}, prints diagnostic information about chunk size calculation,
-      including data dimensions, estimated memory usage, and chosen chunking strategy. Useful for
-      understanding memory usage patterns and debugging performance issues (default: \code{FALSE}).}
-
- \item{NonNoiseSelection}{Logical; if \code{TRUE}, uses statistical distribution tests to identify
-      and select only variables that significantly deviate from uniform distributions. This feature
-      helps filter out noise variables and focus optimization on meaningful signal variables
-      (default: \code{FALSE}).}
-
- \item{UniformTestStat}{Character string specifying the statistical test for non-uniform variable
-      selection. Uses the same test statistics as \code{TestStat}. Only used when
-      \code{NonNoiseSelection = TRUE} (default: \code{"ks"}).}
-
- \item{UniformThreshold}{Numeric threshold value above which variables are considered significantly
-      non-uniform. Higher values make the selection more stringent. Only used when
-      \code{NonNoiseSelection = TRUE} (default: \code{0.1}).}
-
- \item{WorstSample}{Logical; if \code{TRUE}, the optimization targets the least similar subsample.
-       For testing  purpose (default: FALSE).}
 }
 
 \value{
@@ -92,32 +67,24 @@ opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
   \item{RemovedInstances}{Row indices (or names) of the unselected instances from the original data set.}
 }
 \details{
-  The function automatically optimizes memory usage through chunked processing when dealing with large datasets
-  or high numbers of trials. The chunking strategy considers:
+  Chunked processing can be used to reduce memory usage when dealing with large datasets
+  or high numbers of trials. Set \code{JobSize = NULL} to enable automatic memory-aware
+  chunk-size calculation. The automatic chunking strategy considers:
   \itemize{
-    \item{Data size (number of rows and columns)}
-    \item{Available system memory (detected on Linux systems)}
+    \item{Data size, defined by number of rows and columns}
+    \item{Available system memory, detected on Linux systems}
     \item{Number of processor cores}
     \item{Number of trials to perform}
   }
 
-  For very large datasets or memory-constrained systems, smaller chunks are automatically selected to prevent
-  memory exhaustion, while smaller datasets use larger chunks to minimize computational overhead.
+  Set \code{JobSize = 0} to process all trials in a single batch. Set \code{JobSize}
+  to a positive integer to manually define the number of trials processed per chunk.
 
-  \strong{Variable Selection Methods:}
+  \strong{Variable Selection Method:}
 
-  Two variable selection methods can be used individually or in combination:
-  \itemize{
-    \item{\strong{PCA-based selection} (\code{PCAimportance = TRUE}): Identifies variables with high loadings
-          in the first principal components, focusing on variables that capture the most variance in the data.}
-    \item{\strong{Non-uniform selection} (\code{NonNoiseSelection = TRUE}): Identifies variables that
-          significantly deviate from uniform distributions, helping to filter out noise variables and
-          focus on meaningful signal variables.}
-  }
-
-  When both methods are enabled, the function first attempts to use their intersection. If no variables
-  are found in the intersection, it uses their union. If no variables are selected by any method,
-  the first variable is used to ensure the analysis can proceed, with a warning message displayed.
+  If \code{PCAimportance = TRUE}, PCA-based variable selection is used. Variables are
+  ranked by their loadings in the first principal components, and variables with higher
+  importance scores are used for distribution comparisons.
 }
 \references{
   Lotsch, J., Malkusch, S., Ultsch, A. (2021):\\
@@ -138,32 +105,15 @@ data(iris)
 Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
   Size = 50, Seed = 42, MaxCores = 1, JobSize = 25, verbose = TRUE)
 
-## Example: Use non-uniform variable selection to filter noise variables
+## Example: Use PCA-based variable selection
 data(iris)
-# Add some uniform noise variables to demonstrate filtering
-noisy_iris <- cbind(iris[,1:4],
-                    noise1 = runif(nrow(iris), 0, 10),
-                    noise2 = runif(nrow(iris), -5, 5))
-Iris_filtered <- opdisDownsampling(Data = noisy_iris, Cls = as.integer(iris$Species),
-  Size = 50, Seed = 42, NonNoiseSelection = TRUE, UniformThreshold = 0.05, MaxCores = 1)
-
-## Example: Combine PCA and non-uniform selection
-data(iris)
-Iris_combined <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
-  Size = 50, Seed = 42, PCAimportance = TRUE, NonNoiseSelection = TRUE, MaxCores = 1)
+Iris_pca <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Species),
+  Size = 50, Seed = 42, PCAimportance = TRUE, MaxCores = 1)
 
 ## Example: Memory-efficient processing of large dataset with many trials
 \dontrun{
-# For large datasets, automatic chunking optimizes memory usage
+# For large datasets, automatic chunking can reduce memory usage
 LargeDataSample <- opdisDownsampling(Data = large_dataset,
-  Size = 0.1, Seed = 42, nTrials = 5000, verbose = TRUE)
+  Size = 0.1, Seed = 42, nTrials = 5000, JobSize = NULL, verbose = TRUE)
 }
 }
-\keyword{downsampling}
-\keyword{data reduction}
-\keyword{data splits}
-\keyword{distribution preservation}
-\keyword{sampling}
-\keyword{memory optimization}
-\keyword{variable selection}
-\keyword{noise filtering}

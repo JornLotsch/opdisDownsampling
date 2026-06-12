@@ -15,4 +15,5 @@
 ^experiments
 .*\.RData$
 -*\.tar.gz$
+.*\.md
 

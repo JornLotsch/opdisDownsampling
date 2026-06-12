@@ -9,41 +9,24 @@
 #' @param Size A numeric value specifying the desired size of the downsampled dataset.
 #'   If 0 < Size < 1, it is treated as a proportion of the original dataset.
 #'   If Size >= 1, it is treated as the absolute number of instances to retain.
-#' @param Seed Seed value for reproducibility. Can be an integer value, or one of:
+#' @param Seed Seed value. Can be an integer value, or one of:
 #'   \itemize{
-#'     \item \code{"auto"}: Uses complex seed recovery to match current RNG state
-#'     \item \code{"simple"} (default): Uses a fast, simple reproducible seed (recommended for most uses)
-#'     \item Integer: Use exact seed value for full control
+#'     \item \code{"auto"}: Uses seed recovery to match the current RNG state.
+#'     \item \code{"simple"} (default): Generates and reports a seed using the
+#'       current RNG state.
+#'     \item Integer: Uses the supplied seed value for exact reproducibility.
 #'   }
-#'   For systematic testing with different seeds, use integer values.
-#'   Otherwise, use \code{"simple"} for good performance with reproducibility,
-#'   or \code{"auto"} when you need to maintain exact RNG state continuity.
+#'   For systematic testing or fully reproducible analyses, use integer values.
 #' @param nTrials The number of trials to perform when sampling the data.
 #' @param TestStat A character string specifying the statistical test to be used for
 #'   comparing the distributions.
 #' @param MaxCores The maximum number of cores to use for parallel processing.
 #' @param PCAimportance A logical value indicating whether to use PCA to identify
 #'   relevant variables.
-#' @param CheckRemoved A logical value indicating whether to also optimize the removed part
-#'   of the data for distribution equality with the original.
-#' @param CheckThreefold A logical value indicating whether to also optimize the reduced part
-#'   of the data for distribution equality with the removed part. Ignored when CheckRemoved is FALSE.
-#' @param OptimizeBetween A logical value indicating whether to optimize the reduced part
-#'   of the data for distribution equality with the removed part. If set, all other comparisons are not performed.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
-#'   If NULL, automatically determined based on data size, nTrials, and available memory.
+#'   If \code{0}, no chunking is applied. If \code{NULL}, an automatic chunk size
+#'   is determined based on data size, nTrials, and available memory.
 #' @param verbose Logical, whether to print chunk size diagnostics.
-#' @param NonNoiseSelection A logical value indicating whether to use non-uniform
-#'   distribution tests to identify relevant variables.
-#' @param UniformTestStat A character string specifying the statistical test to be used for
-#'   non-uniform variable selection. Available options are: "ks" (Kolmogorov-Smirnov),
-#'   "ad" (Anderson-Darling), "kuiper", "cvm" (Cramér-von Mises), "wass" (Wasserstein),
-#'   "dts" (Distributional Transform Statistic), "kld" (Kullback-Leibler divergence),
-#'   "amrdd" (Average Mean Root of Distributional Differences), and "euc" (Euclidean distance).
-#'   Only used when NonNoiseSelection = TRUE (default: "ks").
-#' @param UniformThreshold Threshold value for non-uniform variable selection (default: 0.1).
-#' @param WorstSample A logical value for testing purpose reversing the split ranking to obtain
-#'   the least similar subsample (default: FALSE).
 #'
 #' @return A list with the following elements:
 #'   - `ReducedData`: The downsampled dataset.
@@ -60,26 +43,48 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              CheckRemoved = FALSE, CheckThreefold = FALSE, OptimizeBetween = FALSE,
-                              JobSize = 0, verbose = FALSE, NonNoiseSelection = FALSE,
-                              UniformTestStat = "ks", UniformThreshold = 0.05, WorstSample = FALSE) {
-
-  # Set CheckThreefold to FALSE when CheckRemoved is FALSE
-  if (!CheckRemoved) CheckThreefold <- FALSE
-
-  # Set CheckThreefold and CheckRemoved to FALSE when OptimizeBetween is TRUE
-  if (OptimizeBetween) {
-    CheckRemoved <- FALSE
-    CheckThreefold <- FALSE
-  }
-
+                              JobSize = 0, verbose = FALSE) {
   # Create empty data frame
   dfx <- data.frame(Data)
-  dfxempty <- dfx[0,]
+  dfxempty <- dfx[0, ]
 
   # Check if correct input is provided and library can be run
-  if (!is.numeric(as.matrix(na.omit(dfx)))) {
+  if (!all(sapply(dfx, is.numeric))) {
     stop("opdisDownsampling: Only numeric data allowed. Nothing to downsample.")
+  }
+
+  if (!is.numeric(Size) || length(Size) != 1 || is.na(Size) || !is.finite(Size)) {
+    stop("opdisDownsampling: Size must be a single finite numeric value.")
+  }
+
+  if (!is.numeric(nTrials) || length(nTrials) != 1 || is.na(nTrials) || !is.finite(nTrials) || nTrials < 1) {
+    stop("opdisDownsampling: nTrials must be a positive integer.")
+  }
+  nTrials <- as.integer(nTrials)
+
+  # Check for variables with excessive NA values that might cause issues with small subsamples
+  data_cols <- names(dfx)
+  for (col in data_cols) {
+    na_proportion <- sum(is.na(dfx[[col]])) / nrow(dfx)
+
+    # Warn if a variable has all NAs
+    if (na_proportion == 1) {
+      warning(sprintf(
+        "opdisDownsampling: Variable '%s' contains only NA values and will be excluded from distribution comparisons.",
+        col
+      ), call. = FALSE)
+    }
+    # Warn if a variable has many NAs and subsample is small (before Size conversion)
+    else if (na_proportion > 0.5) {
+      # Check if Size is a proportion or absolute
+      target_size <- if (Size > 0 && Size < 1) Size * nrow(dfx) else Size
+      if (target_size < nrow(dfx) * 0.1) {
+        warning(sprintf(
+          "opdisDownsampling: Variable '%s' has %.1f%% NA values. With small subsample size (~%d), there is risk of drawing only NAs.",
+          col, na_proportion * 100, round(target_size)
+        ), call. = FALSE)
+      }
+    }
   }
 
   # Handle class labels
@@ -92,6 +97,15 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
     Cls <- rep(1, nrow(dfx))
   }
   dfx$Cls <- Cls
+
+  if (!is.numeric(Size) || length(Size) != 1 || is.na(Size) || !is.finite(Size)) {
+    stop("opdisDownsampling: Size must be a single finite numeric value.")
+  }
+
+  if (!is.numeric(nTrials) || length(nTrials) != 1 || is.na(nTrials) || !is.finite(nTrials) || nTrials < 1) {
+    stop("opdisDownsampling: nTrials must be a positive integer.")
+  }
+  nTrials <- as.integer(nTrials)
 
   # Handle size parameter: convert proportion to absolute count if needed
   original_size <- Size # Keep original for potential error messages
@@ -108,21 +122,53 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
 
   # Validate the final size
   if (Size >= nrow(dfx)) {
-    warning(sprintf("opdisDownsampling: Size (%d) >= number of rows (%d). Nothing to downsample.",
-                    Size, nrow(dfx)), call. = FALSE)
-    return(list(ReducedData = dfx, RemovedData = dfxempty, ReducedInstances = rownames(dfx)))
+    warning(sprintf(
+      "opdisDownsampling: Size (%d) >= number of rows (%d). Nothing to downsample.",
+      Size, nrow(dfx)
+    ), call. = FALSE)
+
+    ReducedData <- dfx
+    RemovedData <- dfxempty
+
+    if (Clsarg_missing) {
+      ReducedData <- ReducedData[1:(ncol(ReducedData) - 1)]
+      RemovedData <- RemovedData[1:(ncol(RemovedData) - 1)]
+    }
+
+    return(list(
+      ReducedData = ReducedData,
+      RemovedData = RemovedData,
+      ReducedInstances = rownames(ReducedData),
+      RemovedInstances = rownames(RemovedData)
+    ))
   }
 
   if (Size <= 0) {
     warning(sprintf("opdisDownsampling: Size (%d) <= 0. All data will be removed.", Size), call. = FALSE)
-    return(list(ReducedData = dfxempty, RemovedData = dfx, ReducedInstances = rownames(dfxempty)))
+
+    ReducedData <- dfxempty
+    RemovedData <- dfx
+
+    if (Clsarg_missing) {
+      ReducedData <- ReducedData[1:(ncol(ReducedData) - 1)]
+      RemovedData <- RemovedData[1:(ncol(RemovedData) - 1)]
+    }
+
+    return(list(
+      ReducedData = ReducedData,
+      RemovedData = RemovedData,
+      ReducedInstances = rownames(ReducedData),
+      RemovedInstances = rownames(RemovedData)
+    ))
   }
 
   # Handle test statistic
   TestStats <- c("ad", "kuiper", "cvm", "wass", "dts", "ks", "kld", "amrdd", "euc", "nent")
   if (!(TestStat %in% TestStats)) {
-    warning(paste0("opdisDownsampling: Possible TestStat = ", paste(TestStats, collapse = ", "),
-                   ". TestStat set to default = 'ad'."), call. = FALSE)
+    warning(paste0(
+      "opdisDownsampling: Possible TestStat = ", paste(TestStats, collapse = ", "),
+      ". TestStat set to default = 'ad'."
+    ), call. = FALSE)
     TestStat <- "ad"
   }
 
@@ -133,9 +179,13 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
     Seed <- as.integer(Seed)
   } else if (is.character(Seed)) {
     Seed <- switch(Seed,
-                   "auto" = as.integer(get_seed()),           # Complex seed recovery
-                   "simple" = sample(1:100, 1),              # Simple reproducible seed (default)
-                   stop("Invalid Seed string. Use 'auto', 'simple', or an integer.")
+      "auto" = as.integer(get_seed()), # Complex seed recovery
+      "simple" = { # Generate and report a seed from the current RNG state
+        temp_seed <- sample(1:100000, 1)
+        warning(paste0("opdisDownsampling: Seed set at ", temp_seed, "."), call. = FALSE)
+        temp_seed
+      },
+      stop("Invalid Seed input. Use 'auto', 'simple', or an integer.")
     )
   } else {
     # Fallback for backward compatibility
@@ -147,49 +197,46 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
   # Number of cores used
   nProc <- determine_n_cores(MaxCores)
 
-  # Determine optimal chunk size if not provided or handle no-chunking request
-  if (JobSize <= 0) {
-    # 0 or negative means no chunking
-    JobSize <- nTrials # Process everything in one chunk
+  # Determine chunk size
+  if (is.null(JobSize)) {
+    # NULL enables automatic memory-aware chunk-size calculation
+    JobSize <- calculate_optimal_chunk_size(
+      n_rows = nrow(dfx),
+      n_cols = ncol(dfx) - 1,
+      nTrials = nTrials,
+      nProc = nProc
+    )
 
-    # Still print diagnostics if requested, but indicate no chunking
+    print_chunk_diagnostics(nrow(dfx), ncol(dfx) - 1, nTrials, JobSize, verbose)
+  } else if (JobSize <= 0) {
+    # 0 or negative means no chunking: process all trials in one batch
+    JobSize <- nTrials
+
     if (verbose) {
-      data_size_mb <- (nrow(dfx) * (ncol(dfx) - 1) * 8) / (1024 ^ 2)
+      data_size_mb <- (nrow(dfx) * (ncol(dfx) - 1) * 8) / (1024^2)
       message(sprintf("Chunk size diagnostics:"))
       message(sprintf("  Data: %d rows x %d cols (%.1f MB)", nrow(dfx), ncol(dfx) - 1, data_size_mb))
-      message(sprintf("  Trials: %d, Chunk size: %d (no chunking - single batch)",
-                      nTrials, JobSize))
+      message(sprintf(
+        "  Trials: %d, Chunk size: %d (no chunking - single batch)",
+        nTrials, JobSize
+      ))
     }
   } else {
-    # Use the provided JobSize or calculate optimal size
-    if (is.null(JobSize)) {
-      # This condition won't be hit with the new default, but kept for clarity
-      JobSize <- calculate_optimal_chunk_size(
-        n_rows = nrow(dfx),
-        n_cols = ncol(dfx) - 1,
-        nTrials = nTrials,
-        nProc = nProc
-      )
-    }
-
-    # Print diagnostics if requested
+    # Positive JobSize means user-defined chunk size
+    JobSize <- as.integer(JobSize)
     print_chunk_diagnostics(nrow(dfx), ncol(dfx) - 1, nTrials, JobSize, verbose)
   }
 
   # Perform sampling and analyze picked data subsets
-  ReducedDiag <- sample_and_analyze(DataAndClasses = dfx,
-                                    TestStat = TestStat,
-                                    Size = Size,
-                                    list.of.seeds = list.of.seeds,
-                                    PCAimportance = PCAimportance,
-                                    NonNoiseSelection = NonNoiseSelection,
-                                    UniformTestStat = UniformTestStat,
-                                    UniformThreshold = UniformThreshold,
-                                    nProc = nProc,
-                                    CheckRemoved = CheckRemoved,
-                                    CheckThreefold = CheckThreefold,
-                                    OptimizeBetween = OptimizeBetween,
-                                    JobSize = JobSize)
+  ReducedDiag <- sample_and_analyze(
+    DataAndClasses = dfx,
+    TestStat = TestStat,
+    Size = Size,
+    list.of.seeds = list.of.seeds,
+    PCAimportance = PCAimportance,
+    nProc = nProc,
+    JobSize = JobSize
+  )
 
   # Validate and process trial results
   validate_reduced_diag(ReducedDiag)
@@ -208,36 +255,39 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
   var_names <- names(ReducedDiag[[1]][[1]])
 
   # Pre-allocate matrices with error handling
-  tryCatch({
-    AD_reduced_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
-                                 dimnames = list(NULL, var_names))
-    AD_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
-                                 dimnames = list(NULL, var_names))
-    AD_reduced_vs_removed_statMat <- matrix(NA_real_, nrow = n_trials, ncol = n_vars,
-                                            dimnames = list(NULL, var_names))
-  }, error = function(e) {
-    stop(sprintf("opdisDownsampling: Failed to allocate matrices: %s", e$message))
-  })
+  tryCatch(
+    {
+      AD_reduced_statMat <- matrix(NA_real_,
+        nrow = n_trials, ncol = n_vars,
+        dimnames = list(NULL, var_names)
+      )
+    },
+    error = function(e) {
+      stop(sprintf("opdisDownsampling: Failed to allocate matrices: %s", e$message))
+    }
+  )
 
   # Fill matrices and validate
   for (i in seq_len(n_trials)) {
     if (!is.null(ReducedDiag[[i]])) {
-      tryCatch({
-        # Validate data structure for each trial
-        if (is.list(ReducedDiag[[i]]) &&
-          all(c("ADv_reduced", "ADv_removed", "ADv_reduced_vs_removed") %in% names(ReducedDiag[[i]]))) {
-
-          AD_reduced_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced"]]
-          AD_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_removed"]]
-          AD_reduced_vs_removed_statMat[i,] <- ReducedDiag[[i]][["ADv_reduced_vs_removed"]]
-        } else {
-          warning(sprintf("opdisDownsampling: Invalid data structure in trial %d, skipping.", i),
-                  call. = FALSE)
+      tryCatch(
+        {
+          # Validate data structure for each trial
+          if (is.list(ReducedDiag[[i]]) &&
+            all(c("ADv_reduced", "ADv_removed") %in% names(ReducedDiag[[i]]))) {
+            AD_reduced_statMat[i, ] <- ReducedDiag[[i]][["ADv_reduced"]]
+          } else {
+            warning(sprintf("opdisDownsampling: Invalid data structure in trial %d, skipping.", i),
+              call. = FALSE
+            )
+          }
+        },
+        error = function(e) {
+          warning(sprintf("opdisDownsampling: Error processing trial %d: %s", i, e$message),
+            call. = FALSE
+          )
         }
-      }, error = function(e) {
-        warning(sprintf("opdisDownsampling: Error processing trial %d: %s", i, e$message),
-                call. = FALSE)
-      })
+      )
     }
   }
 
@@ -246,35 +296,35 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
   gc()
 
   # Validate matrices before proceeding
-  validate_matrices(list(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat),
-                    c("AD_reduced_statMat", "AD_removed_statMat", "AD_reduced_vs_removed_statMat"))
+  validate_matrices(
+    list(AD_reduced_statMat),
+    c("AD_reduced_statMat")
+  )
 
   # Find best subsample using refactored selection logic with error handling
-  BestTrial <- tryCatch({
-    if (OptimizeBetween) {
-      select_best_trial_one_matrix(AD_reduced_vs_removed_statMat, WorstSample)
-    } else if (CheckThreefold && CheckRemoved) {
-      select_best_trial_threefold(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat,WorstSample)
-    } else if (CheckRemoved) {
-      select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat, WorstSample)
-    } else {
-      select_best_trial_one_matrix(AD_reduced_statMat, WorstSample)
+  BestTrial <- tryCatch(
+    {
+      select_best_trial_one_matrix(AD_reduced_statMat)
+    },
+    error = function(e) {
+      warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),
+        call. = FALSE
+      )
+      1
     }
-  }, error = function(e) {
-    warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),
-            call. = FALSE)
-    1
-  })
+  )
 
   # Validate BestTrial result
   if (is.na(BestTrial) || BestTrial < 1 || BestTrial > n_trials) {
-    warning(sprintf("opdisDownsampling: Invalid best trial index (%s). Using first trial.",
-                    as.character(BestTrial)), call. = FALSE)
+    warning(sprintf(
+      "opdisDownsampling: Invalid best trial index (%s). Using first trial.",
+      as.character(BestTrial)
+    ), call. = FALSE)
     BestTrial <- 1
   }
 
   # Clean up stat matrices - moved after BestTrial validation
-  rm(AD_reduced_statMat, AD_removed_statMat, AD_reduced_vs_removed_statMat)
+  rm(AD_reduced_statMat)
   gc()
 
   # Get the best subsample
@@ -287,8 +337,10 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
     RemovedData <- RemovedData[1:(ncol(RemovedData) - 1)]
   }
 
-  return(list(ReducedData = ReducedData,
-              RemovedData = RemovedData,
-              ReducedInstances = rownames(ReducedData),
-              RemovedInstances = rownames(RemovedData)))
+  return(list(
+    ReducedData = ReducedData,
+    RemovedData = RemovedData,
+    ReducedInstances = rownames(ReducedData),
+    RemovedInstances = rownames(RemovedData)
+  ))
 }
