@@ -12,7 +12,17 @@ LinkingTo: Rcpp
 License: GPL-3
 URL: https://github.com/JornLotsch/opdisDownsampling
 Encoding: UTF-8
-Author: Jorn Lotsch [aut,cre] (<https://orcid.org/0000-0002-5818-6958>),
-  Sebastian Malkusch [aut] (<https://orcid.org/0000-0001-6766-140X>),
-  Alfred Ultsch [aut] (<https://orcid.org/0000-0002-7845-3283>)
+Authors@R: c(person(given = "Jorn",
+                      family = "Lotsch",
+                      role = c("aut", "cre"),
+                      email = "j.lotsch@em.uni-frankfurt.de",
+                      comment = c(ORCID = "0000-0002-5818-6958")),
+               person(given = "Sebastian",
+                      family = "Malkusch",
+                      role = "aut",
+                      comment = c(ORCID = "0000-0001-6766-140X")),
+               person(given = "Alfred",
+                      family = "Ultsch",
+                      role = "aut",
+                      comment = c(ORCID = "0000-0002-7845-3283")))
 Maintainer: Jorn Lotsch <j.lotsch@em.uni-frankfurt.de>

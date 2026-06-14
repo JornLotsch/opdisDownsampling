@@ -78,7 +78,8 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
       target_size <- if (Size > 0 && Size < 1) Size * nrow(dfx) else Size
       if (target_size < nrow(dfx) * 0.1) {
         warning(sprintf(
-          "opdisDownsampling: Variable '%s' has %.1f%% NA values. With small subsample size (~%d), there is risk of drawing only NAs.",
+          "opdisDownsampling: Variable '%s' has %.1f%% NA values.
+          With small subsample size (~%d), there is risk of drawing only NAs.",
           col, na_proportion * 100, round(target_size)
         ), call. = FALSE)
       }

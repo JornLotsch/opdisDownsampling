@@ -11,9 +11,9 @@ This repository contains the full source code of the package, as available on [C
 
 - **Distribution-preserving downsampling**: Selects a subset of samples whose statistical distribution closely matches the original dataset.
 
-<img src="./DownsamplingPDFartificial10PDEraw.svg">
+<img src="./DownsamplingPDFartificial10PDEraw.svg" alt="Distribution-preserving downsampling illustration">
 
-
+*Figure adapted from: Lötsch J, Malkusch S, Ultsch A (2021). Optimal distribution-preserving downsampling of large biomedical data sets (opdisDownsampling). PLOS ONE. https://doi.org/10.1371/journal.pone.0255838* (see "Reference" paragraph below)
 
 - **Class-proportional selection**: Maintains the proportions of different classes within the down-sampled data.
 - **Parallel computing support**: Can exploit multiple CPU cores for efficient processing.
@@ -62,13 +62,41 @@ Iris50percent <- opdisDownsampling(Data = iris[,1:4], Cls = as.integer(iris$Spec
 ### Memory-efficient processing for large datasets
 
 ```r
-# Automatic memory optimization for large datasets
-LargeDataSample <- opdisDownsampling(Data = large_dataset, 
-  Size = 0.1, Seed = 42, nTrials = 5000, JobSize = NULL, verbose = TRUE)
-  
+set.seed(42)
+
+# Small synthetic dataset for the first example
+large_dataset <- data.frame(
+  class = sample(c("A", "B"), 2000, replace = TRUE),
+  x1 = rnorm(2000),
+  x2 = runif(2000),
+  x3 = rpois(2000, lambda = 3)
+)
+
+# Smaller synthetic dataset for the second example
+my_data <- data.frame(
+  class = sample(c("A", "B"), 300, replace = TRUE),
+  x1 = rnorm(300),
+  x2 = runif(300)
+)
+
+# Automatic memory optimisation for large datasets (for demonstration purposes, a relatively small 'large'  dataset is generated).
+LargeDataSample <- opdisDownsampling(
+  Data = large_dataset[,2:ncol(large_dataset)],
+  Size = 0.1,
+  Seed = 42,
+  nTrials = 5000,
+  JobSize = NULL,
+  verbose = TRUE
+)
+
 # Custom chunk size for fine-tuned memory control
-CustomSample <- opdisDownsampling(Data = my_data, 
-  Size = 100, Seed = 42, nTrials = 2000, JobSize = 50)
+CustomSample <- opdisDownsampling(
+  Data = my_data[,2:ncol(my_data)],
+  Size = 100,
+  Seed = 42,
+  nTrials = 2000,
+  JobSize = 500
+)
 ```
 
 ### Arguments
@@ -134,6 +162,34 @@ Returns a list containing:
 
 ---
 
+### Handling missing values
+
+`opdisDownsampling()` also works with data containing missing values.
+
+```r
+library(opdisDownsampling)
+
+set.seed(42)
+iris_data <- data.frame(iris[, 1:4])
+
+n_na <- round(0.05 * nrow(iris_data) * ncol(iris_data))
+na_pos <- sample(nrow(iris_data) * ncol(iris_data), n_na)
+
+x <- as.matrix(iris_data)
+x[na_pos] <- NA
+iris_with_missing <- as.data.frame(x)
+iris_with_missing
+
+downsampled_missing <- opdisDownsampling(
+  Data = iris_with_missing,
+  Cls = iris$Species,
+  Size = 0.8,
+  Seed = 42
+)
+
+downsampled_missing
+```
+
 ## Performance Tips
 ### For Large Datasets
 - Use `JobSize = NULL` to enable automatic memory-aware chunk-size calculation.
@@ -170,7 +226,8 @@ See the [reference manual](https://cran.r-project.org/web/packages/opdisDownsamp
 
 ---
 
-## Citing opdisDownsampling
+## Reference
+### Citing opdisDownsampling
 
 If you use this package, please cite the CRAN package and the original paper:
 
