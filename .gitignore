@@ -14,10 +14,10 @@ src/*.o
 opdisDownsampling*
 opdisDownsampling (Kopie)*
 opdisDownsampling (Kopieren)*
+opdisDownsamplingJUNE26*
 12RLibrary.Rproj
 p_experiment*
 combi*
 Tau*
 SmoothDensHist1dim.RwithCPP
 Test_opdisDownsampling.R
-DownsamplingExperiment_for_GitHub.R

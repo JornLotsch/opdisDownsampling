@@ -16,4 +16,5 @@
 .*\.RData$
 -*\.tar.gz$
 .*\.md
+generate_downsampling_figure\.R
 
