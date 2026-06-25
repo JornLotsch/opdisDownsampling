@@ -1,9 +1,8 @@
-# opdisDownsampling: An optimized method for distribution-preserving class-proportional downsampling of biomedical data.
+# opdisDownsampling: Distribution-preserving class-proportional downsampling for biomedical data
 
+**opdisDownsampling** is an R package for optimal, *distribution-preserving, class-proportional down-sampling* of biomedical data. It reduces dataset size while preserving class proportions and the statistical structure of the original data.
 
-**opdisDownsampling** is an R package for optimal, *distribution-preserving, class-proportional down-sampling* of bio-medical data. It provides methods to reduce dataset size while maintaining both the class distribution and the statistical properties of the original data.
-
-This repository contains the full source code of the package, as available on [CRAN](https://cran.r-project.org/package=opdisDownsampling), and is described in the [original publication](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0255838).
+This repository contains the package source and documentation.
 
 ---
 
@@ -17,7 +16,7 @@ This repository contains the full source code of the package, as available on [C
 
 - **Class-proportional selection**: Maintains the proportions of different classes within the down-sampled data.
 - **Parallel computing support**: Can exploit multiple CPU cores for efficient processing.
-- **Flexible test statistics**: Supports several statistical tests for distribution comparison.
+- **Flexible test statistics**: Supports several options for distribution comparison.
 
 ---
 
@@ -209,7 +208,7 @@ downsampled_missing
 
 ## Documentation
 
-See the [reference manual](https://cran.r-project.org/web/packages/opdisDownsampling/opdisDownsampling.pdf) for full function documentation.
+See the [CRAN package page](https://CRAN.R-project.org/package=opdisDownsampling) for full documentation and the reference manual.
 
 - **Original article describing the method:**  
   "Optimal distribution preserving down‐sampling of bio‐medical data"  

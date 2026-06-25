@@ -14,7 +14,6 @@
 .*\.code-workspace$
 ^experiments
 .*\.RData$
--*\.tar.gz$
-.*\.md
+-*\.tar\.gz
 generate_downsampling_figure\.R
 
