@@ -16,9 +16,10 @@
 #' @param Size Desired size of the reduced dataset
 #' @param Seed Random seed for this specific trial
 #' @param selectedVars Character vector of variable names to include
+#' @param CheckRemoved Whether to compute removed vs original comparison
 #' @return Named list with ADv_reduced, ADv_removed
 #' @keywords internal
-make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars) {
+make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selectedVars, CheckRemoved = FALSE) {
   # Create the data split
   df_reduced <- MakeReducedDataMat(DataSubset, Size, Seed)
 
@@ -29,9 +30,17 @@ make_and_analyse_subsample <- function(DataSubset, TestStat, Size, Seed, selecte
     TestStat = TestStat
   )
 
-  # Compute removed vs original comparison if needed
-  ADv_removed <- rep(NA_real_, length(selectedVars))
-  names(ADv_removed) <- selectedVars
+  # Compute removed vs original comparison only when requested
+  if (CheckRemoved) {
+    ADv_removed <- CompareReducedDataMat(
+      DataAndClasses = DataSubset,
+      ReducedDataList = df_reduced$RemovedDataList,
+      TestStat = TestStat
+    )
+  } else {
+    ADv_removed <- rep(NA_real_, length(selectedVars))
+    names(ADv_removed) <- selectedVars
+  }
 
   # Clean up intermediate objects
   rm(df_reduced)

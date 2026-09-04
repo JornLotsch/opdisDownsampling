@@ -12,6 +12,7 @@
 #'     \item TestStat: Statistical test for comparing distributions
 #'     \item Size: Desired size of downsampled dataset
 #'     \item selectedVars: Vector of selected variable names
+#'     \item CheckRemoved: Logical for optimizing removed data
 #'   }
 #' @param JobSize Number of seeds to process in each chunk.
 #' @param nProc Number of processor cores to use for parallel processing.
@@ -124,7 +125,8 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
         TestStat = processing_params$TestStat,
         Size = processing_params$Size,
         Seed = seed,
-        selectedVars = processing_params$selectedVars
+        selectedVars = processing_params$selectedVars,
+        CheckRemoved = processing_params$CheckRemoved
       ))
     }
 
@@ -139,7 +141,8 @@ process_chunk_parallel <- function(seed_chunk, DataSubset, processing_params, nP
           TestStat = processing_params$TestStat,
           Size = processing_params$Size,
           Seed = seed,
-          selectedVars = processing_params$selectedVars
+          selectedVars = processing_params$selectedVars,
+          CheckRemoved = processing_params$CheckRemoved
         )
       },
       mc.cores = min(nProc, length(seed_chunk)),
@@ -174,7 +177,8 @@ process_chunk_sequential <- function(seed_chunk, DataSubset, processing_params) 
         TestStat = processing_params$TestStat,
         Size = processing_params$Size,
         Seed = seed,
-        selectedVars = processing_params$selectedVars
+        selectedVars = processing_params$selectedVars,
+        CheckRemoved = processing_params$CheckRemoved
       )
     }
   )

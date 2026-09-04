@@ -13,6 +13,8 @@
 #' @param PCAimportance A logical value indicating whether to use PCA-based
 #'   variable selection.
 #' @param nProc The number of cores to use for parallel processing.
+#' @param CheckRemoved A logical value indicating whether to also optimize the removed part
+#'   of the data for distribution equality with the original.
 #' @param JobSize Number of seeds to process in each chunk.
 #'
 #' @return A list of results from \code{make_and_analyse_subsample()}, one result
@@ -32,7 +34,7 @@
 #' @importFrom doParallel registerDoParallel stopImplicitCluster
 #'
 sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PCAimportance, nProc,
-                               JobSize = NULL) {
+                               CheckRemoved = FALSE, JobSize = NULL) {
   # Set default chunk size if not provided
   if (is.null(JobSize)) {
     JobSize <- min(50, max(1, ceiling(length(list.of.seeds) / max(1, nProc))))
@@ -65,7 +67,8 @@ sample_and_analyze <- function(DataAndClasses, TestStat, Size, list.of.seeds, PC
   processing_params <- list(
     TestStat = TestStat,
     Size = Size,
-    selectedVars = selectedVars
+    selectedVars = selectedVars,
+    CheckRemoved = CheckRemoved
   )
 
   # Phase 3: Chunk-Based Processing

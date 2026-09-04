@@ -6,6 +6,25 @@
 #' @param AD_statMat Matrix of statistics comparing data
 #' @return Integer. Index of the best trial
 #' @keywords internal
+select_best_trial_check_removed <- function(AD_reduced_statMat, AD_removed_statMat) {
+  if (is.null(AD_reduced_statMat) || nrow(AD_reduced_statMat) == 0) {
+    stop("opdisDownsampling: No data available.")
+  }
+
+  max_reduced <- apply(AD_reduced_statMat, 1, max, na.rm = TRUE)
+  max_removed <- apply(AD_removed_statMat, 1, max, na.rm = TRUE)
+  combined <- max_reduced + max_removed
+
+  if (all(is.infinite(combined))) {
+    warning("opdisDownsampling: All combined values are infinite in CheckRemoved comparison.",
+      call. = FALSE
+    )
+    return(1)
+  }
+
+  which.min(combined)
+}
+
 select_best_trial_one_matrix <- function(AD_statMat) {
   if (is.null(AD_statMat) || nrow(AD_statMat) == 0) {
     stop("opdisDownsampling: No data available.")

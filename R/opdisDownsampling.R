@@ -23,6 +23,8 @@
 #' @param MaxCores The maximum number of cores to use for parallel processing.
 #' @param PCAimportance A logical value indicating whether to use PCA to identify
 #'   relevant variables.
+#' @param CheckRemoved A logical value indicating whether to also optimize the removed part
+#'   of the data for distribution equality with the original.
 #' @param JobSize Number of seeds to process in each chunk for memory optimization.
 #'   If \code{0}, no chunking is applied. If \code{NULL}, an automatic chunk size
 #'   is determined based on data size, nTrials, and available memory.
@@ -43,7 +45,7 @@
 #' @export
 opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, TestStat = "ad",
                               MaxCores = getOption("mc.cores", 2L), PCAimportance = FALSE,
-                              JobSize = 0, verbose = FALSE) {
+                              CheckRemoved = FALSE, JobSize = 0, verbose = FALSE) {
   # Create empty data frame
   dfx <- data.frame(Data)
   dfxempty <- dfx[0, ]
@@ -234,6 +236,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
     list.of.seeds = list.of.seeds,
     PCAimportance = PCAimportance,
     nProc = nProc,
+    CheckRemoved = CheckRemoved,
     JobSize = JobSize
   )
 
@@ -260,6 +263,10 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
         nrow = n_trials, ncol = n_vars,
         dimnames = list(NULL, var_names)
       )
+      AD_removed_statMat <- matrix(NA_real_,
+        nrow = n_trials, ncol = n_vars,
+        dimnames = list(NULL, var_names)
+      )
     },
     error = function(e) {
       stop(sprintf("opdisDownsampling: Failed to allocate matrices: %s", e$message))
@@ -275,6 +282,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
           if (is.list(ReducedDiag[[i]]) &&
             all(c("ADv_reduced", "ADv_removed") %in% names(ReducedDiag[[i]]))) {
             AD_reduced_statMat[i, ] <- ReducedDiag[[i]][["ADv_reduced"]]
+            AD_removed_statMat[i, ] <- ReducedDiag[[i]][["ADv_removed"]]
           } else {
             warning(sprintf("opdisDownsampling: Invalid data structure in trial %d, skipping.", i),
               call. = FALSE
@@ -296,14 +304,19 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
 
   # Validate matrices before proceeding
   validate_matrices(
-    list(AD_reduced_statMat),
-    c("AD_reduced_statMat")
+    list(AD_reduced_statMat, AD_removed_statMat),
+    c("AD_reduced_statMat", "AD_removed_statMat"),
+    check_usage = c(TRUE, CheckRemoved)
   )
 
   # Find best subsample using refactored selection logic with error handling
   BestTrial <- tryCatch(
     {
-      select_best_trial_one_matrix(AD_reduced_statMat)
+      if (CheckRemoved) {
+        select_best_trial_check_removed(AD_reduced_statMat, AD_removed_statMat)
+      } else {
+        select_best_trial_one_matrix(AD_reduced_statMat)
+      }
     },
     error = function(e) {
       warning(sprintf("opdisDownsampling: Error in trial selection: %s. Using first trial.", e$message),
@@ -323,7 +336,7 @@ opdisDownsampling <- function(Data, Cls, Size, Seed = "simple", nTrials = 1000, 
   }
 
   # Clean up stat matrices - moved after BestTrial validation
-  rm(AD_reduced_statMat)
+  rm(AD_reduced_statMat, AD_removed_statMat)
   gc()
 
   # Get the best subsample

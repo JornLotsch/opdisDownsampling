@@ -110,6 +110,7 @@ CustomSample <- opdisDownsampling(
 | `TestStat` | Statistical test for distribution comparison. Default: `"ad"`. Available options: `"ad"`, `"kuiper"`, `"cvm"`, `"wass"`, `"dts"`, `"ks"`, `"kld"`, `"amrdd"`, `"euc"`, `"nent"`. |
 | `MaxCores` | Maximum cores for parallel processing |
 | `PCAimportance` | Use PCA for variable selection |
+| `CheckRemoved` | Logical value; if `TRUE`, also optimizes the removed data for distributional similarity to the original data. Default: `FALSE` |
 | `JobSize` | Number of trials per chunk. Use `0` for no chunking, `NULL` for automatic memory-aware chunk-size calculation, or a positive integer for manual chunking. |
 | `verbose` | Print diagnostic information about memory usage and chunking |
 

@@ -8,7 +8,7 @@
 \usage{
 opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
   TestStat = "ad", MaxCores = getOption("mc.cores", 2L),
-  PCAimportance = FALSE, JobSize = 0, verbose = FALSE)
+  PCAimportance = FALSE, CheckRemoved = FALSE, JobSize = 0, verbose = FALSE)
 }
 \arguments{
  \item{Data}{Numeric data as a vector, matrix, or data frame. Each row represents an instance, each column a variable.}
@@ -45,6 +45,10 @@ opdisDownsampling(Data, Cls, Size, Seed = "simple", nTrials = 1000,
  \item{MaxCores}{Maximum number of CPU cores to use for parallel computing (default is value stored in \code{getOption("mc.cores")}, or 2 if missing).}
 
  \item{PCAimportance}{Logical; if \code{TRUE}, only variables deemed important by principal component analysis are used in computing similarity statistics.}
+
+ \item{CheckRemoved}{Logical; if \code{TRUE}, the optimization also considers distribution
+      similarity between the removed data and the original, selecting the trial that minimizes
+      distributional differences for both the retained and the removed subset (default: \code{FALSE}).}
 
  \item{JobSize}{Integer specifying the number of trials to process in each chunk.
       If \code{0} (default), no chunking is applied. If \code{NULL}, an automatic
